@@ -59,10 +59,13 @@ The app has no database and does not save the entered text. Speech synthesis hap
 
 ## Technology
 
-- Next.js-compatible App Router components
+- Next.js App Router
 - React 19
 - TypeScript
-- vinext/Vite build for Cloudflare-compatible deployment
+
+## Deploying to Vercel
+
+Import this GitHub repository in Vercel and keep the framework preset set to **Next.js**. The standard build command is `npm run build`; no output-directory override is required.
 
 ## License
 

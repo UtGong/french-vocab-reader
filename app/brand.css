@@ -1,0 +1,5 @@
+header > span { font-size: 0; }
+header > span::after { content: "☾"; font-size: 22px; }
+header h1, header p { font-size: 0; }
+header h1::after { content: "For Taxol"; font: 700 24px Georgia, serif; }
+header p::after { content: "The choice of moon"; font: 11px Arial, sans-serif; }

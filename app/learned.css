@@ -23,3 +23,28 @@
 .explorer-result td:first-child { white-space: nowrap; }
 .explorer-result td:nth-child(2), .explorer-result td:nth-child(3), .explorer-result td:nth-child(4) { line-height: 1.45; }
 @media (max-width: 700px) { .vocab-explorer { padding: 16px; } .vocab-explorer form > div { grid-template-columns: 1fr; } .word-summary { grid-template-columns: auto 1fr; } .word-summary p { grid-column: 1 / -1; text-align: left; } }
+.study-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+.french-side, .chinese-side { min-height: 150px; padding: 18px; border-radius: 8px; }
+.french-side { display: grid; align-content: center; text-align: center; background: #ffffff12; border: 1px solid #ffffff26; }
+.french-side small, .chinese-side small { color: #bad0cb; font-size: 9px; text-transform: uppercase; letter-spacing: .8px; }
+.french-side h2 { margin: 12px 0; }
+.chinese-side { background: white; color: var(--ink); }
+.chinese-side small { display: block; color: var(--muted); margin-bottom: 12px; }
+.chinese-side b { display: inline-block; padding: 3px 8px; border-radius: 10px; background: var(--soft); color: var(--green); font-size: 10px; }
+.chinese-side p { margin: 12px 0 0; font-size: 17px; font-weight: 700; }
+.chinese-side em { display: block; margin-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.study-queue { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: 9px; }
+.queue-actions { display: flex; justify-content: space-between; gap: 8px; margin: 14px 0 10px; }
+.queue-actions button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: white; font-size: 11px; font-weight: 700; cursor: pointer; }
+.queue-actions .queue-start { border-color: var(--green); background: var(--green); color: white; }
+.queue-actions button:disabled { opacity: .45; cursor: default; }
+.queue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.queue-grid > label { display: flex; align-items: flex-start; gap: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; }
+.queue-grid > label.chosen { border-color: var(--green); background: var(--soft); }
+.queue-grid input { margin-top: 3px; accent-color: var(--green); }
+.queue-grid b, .queue-grid small, .queue-grid em { display: block; }
+.queue-grid b { font: italic 16px Georgia, serif; }
+.queue-grid small { margin-top: 3px; font-size: 10px; color: var(--muted); }
+.queue-grid em { margin-top: 5px; font-size: 9px; color: var(--green); }
+.queued-note { margin: 0 0 10px; color: var(--green); font-size: 11px; font-weight: 700; }
+@media (max-width: 700px) { .study-sides, .queue-grid { grid-template-columns: 1fr; } .french-side, .chinese-side { min-height: 120px; } }

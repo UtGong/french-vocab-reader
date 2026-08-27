@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { askLanguageModel } from "@/lib/huggingface";
 
 const clean = (value: unknown, limit = 500) => typeof value === "string" ? value.trim().slice(0, limit) : "";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {

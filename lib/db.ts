@@ -19,3 +19,17 @@ export async function ensureWordsTable() {
   )`;
   return sql;
 }
+
+export async function ensureStudyQueueTable() {
+  const sql = database();
+  await sql`CREATE TABLE IF NOT EXISTS study_queue (
+    id BIGSERIAL PRIMARY KEY,
+    word TEXT NOT NULL UNIQUE,
+    word_type_zh TEXT NOT NULL,
+    meaning_zh TEXT NOT NULL,
+    details_zh TEXT NOT NULL DEFAULT '',
+    source_word TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  return sql;
+}

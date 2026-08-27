@@ -48,6 +48,13 @@
 .queue-grid em { margin-top: 5px; font-size: 9px; color: var(--green); }
 .queued-note { margin: 0 0 10px; color: var(--green); font-size: 11px; font-weight: 700; }
 @media (max-width: 700px) { .study-sides, .queue-grid { grid-template-columns: 1fr; } .french-side, .chinese-side { min-height: 120px; } }
+.queue-table th:first-child, .queue-table td:first-child { width: 48px; text-align: center; }
+.queue-table td:first-child { font: inherit; }
+.queue-table td:nth-child(2) { font: italic 16px Georgia, serif; font-weight: 700; }
+.queue-table tr.chosen { background: var(--soft); }
+.queue-table button, .row-actions button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 9px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.queue-table .danger-link, .row-actions .danger-link { color: #a33d2d; border-color: #e5c2bb; }
+.row-actions { display: flex; gap: 5px; }
 .primary-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 20px; padding: 5px; border-radius: 9px; background: #f1efe8; }
 .primary-switch button { padding: 11px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; }
 .primary-switch button.active { background: white; color: var(--green); box-shadow: 0 2px 10px #17211f10; }

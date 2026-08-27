@@ -28,9 +28,16 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /fetch\("\/api\/words"/);
   assert.match(page, /fetch\(`\/api\/queue\?id=/);
   assert.match(page, /await completeCurrentWord/);
+  assert.match(queue, /标为已学/);
+  assert.match(queue, /删除/);
+  assert.match(queue, /className="queue-table"/);
   assert.match(page, /确认文本并生成词义/);
   assert.match(page, /fetch\("\/api\/analyze-text"/);
   assert.doesNotMatch(page, /fetch\("\/api\/analyze"/);
+  const prepareText = page.slice(page.indexOf("async function prepareText"), page.indexOf("async function deleteQueueWord"));
+  assert.doesNotMatch(prepareText, /fetch\("\/api\/queue"/);
+  assert.match(page, /移回学习清单/);
+  assert.match(page, /deleteLearnedWord/);
 });
 
 test("uses the configured Hugging Face model without exposed credentials", async () => {

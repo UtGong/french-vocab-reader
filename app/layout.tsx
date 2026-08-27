@@ -5,8 +5,8 @@ import "./brand.css";
 import "./learned.css";
 
 export const metadata: Metadata = {
-  title: "For Taxol — French vocabulary reader",
-  description: "Practice French vocabulary one word at a time with voice-guided progress.",
+  title: "For Taxol — Apprentissage du vocabulaire français",
+  description: "Apprenez le vocabulaire français mot par mot avec une progression guidée par la voix.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body>{children}</body>
     </html>
   );

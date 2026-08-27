@@ -32,7 +32,7 @@ export default function VocabExplorer({ onQueued }: { onQueued: () => void }) {
   }
 
   return <section className="vocab-explorer">
-    <div className="explorer-heading"><div><p className="panel-kicker">AI Vocabulary Explorer</p><h3>词汇联想</h3></div><span>Qwen</span></div>
+    <div className="explorer-heading"><div><p className="panel-kicker">法语词汇助手</p><h3>词汇联想</h3></div><span>Qwen</span></div>
     <form onSubmit={explore}><label htmlFor="explore-word">输入一个法语词汇</label><div><input id="explore-word" value={word} onChange={(event) => setWord(event.target.value)} placeholder="例如：fringant" autoComplete="off" /><button disabled={state === "loading"}>{state === "loading" ? "分析中…" : "生成相关词"}</button></div></form>
     {state === "error" && <p className="explorer-error">生成失败，请稍后重试。</p>}
     {result && <div className="explorer-result"><p className="queued-note">已自动加入学习清单</p>

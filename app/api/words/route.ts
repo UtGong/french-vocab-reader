@@ -57,3 +57,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unable to update word" }, { status: 503 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const id = Number(new URL(request.url).searchParams.get("id"));
+    if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    const sql = await ensureWordsTable();
+    await sql`DELETE FROM learned_words WHERE id = ${id}`;
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    console.error("Unable to delete learned word", error);
+    return NextResponse.json({ error: "Unable to delete word" }, { status: 503 });
+  }
+}

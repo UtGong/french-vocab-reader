@@ -14,6 +14,10 @@ test("connects AI results to the persistent study queue", async () => {
   assert.match(explorer, /result\.patternWords\.map/);
   assert.match(explorer, /加入学习清单/);
   assert.match(explorer, /取消全选/);
+  assert.match(explorer, /全部收起/);
+  assert.match(explorer, /全部展开/);
+  assert.match(explorer, /className="fold-heading"/);
+  assert.match(explorer, /aria-expanded/);
   assert.match(queueRoute, /export async function GET/);
   assert.match(queueRoute, /export async function POST/);
   assert.match(queueRoute, /export async function DELETE/);

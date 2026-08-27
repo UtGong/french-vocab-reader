@@ -14,6 +14,7 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
   const [selected, setSelected] = useState<string[]>([]);
   const [state, setState] = useState<"idle" | "loading" | "saving" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [openSections, setOpenSections] = useState<string[]>(["related"]);
   const candidates = useMemo<Candidate[]>(() => result ? [
     { key: "main", word: result.word, wordType: result.wordType, meaning: result.meaning, details: "核心词", sourceWord: result.word },
     ...result.relatedWords.map((item, index) => ({ key: `related-${index}`, word: item.word, wordType: item.wordType, meaning: item.meaning, details: item.relationship, sourceWord: result.word })),
@@ -24,7 +25,7 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
   function toggle(key: string) { setSelected((keys) => keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]); }
   async function explore(event: FormEvent) {
     event.preventDefault(); if (!word.trim() || state === "loading") return;
-    setState("loading"); setResult(null); setSelected([]); setMessage("");
+    setState("loading"); setResult(null); setSelected([]); setMessage(""); setOpenSections(["related"]);
     try {
       const response = await fetch("/api/explore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word: word.trim(), targetLevel }) });
       if (!response.ok) throw new Error();
@@ -42,20 +43,19 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
     } catch { setState("error"); }
   }
   const checkbox = (key: string, label: string) => <input aria-label={`选择 ${label}`} type="checkbox" checked={selected.includes(key)} onChange={() => toggle(key)} />;
+  const toggleSection = (section: string) => setOpenSections((sections) => sections.includes(section) ? sections.filter((item) => item !== section) : [...sections, section]);
+  const sectionHeading = (section: string, title: string, count: number) => <button type="button" className="fold-heading" aria-expanded={openSections.includes(section)} onClick={() => toggleSection(section)}><span><b>{title}</b><small>{count} 个词</small></span><i>{openSections.includes(section) ? "收起 −" : "展开 +"}</i></button>;
 
   return <section className="vocab-explorer">
     <div className="explorer-heading"><div><p className="panel-kicker">法语词汇助手 · {targetLevel}</p><h3>词汇联想</h3></div><span>Qwen</span></div>
     <form onSubmit={explore}><label htmlFor="explore-word">输入一个法语词汇</label><div><input id="explore-word" value={word} onChange={(event) => setWord(event.target.value)} placeholder="例如：fringant" autoComplete="off" /><button disabled={state === "loading"}>{state === "loading" ? "分析中…" : "生成相关词"}</button></div></form>
     {state === "error" && <p className="explorer-error">操作失败，请稍后重试。</p>}
     {result && <div className="explorer-result">
-      <div className="selection-toolbar"><button onClick={() => setSelected(selected.length === candidates.length ? [] : candidates.map((item) => item.key))}>{selected.length === candidates.length ? "取消全选" : "全选"}</button><button className="add-selected" disabled={!selected.length || state === "saving"} onClick={addSelected}>{state === "saving" ? "正在加入…" : `加入学习清单（${selected.length}）`}</button><span>{message}</span></div>
+      <div className="selection-toolbar"><button onClick={() => setSelected(selected.length === candidates.length ? [] : candidates.map((item) => item.key))}>{selected.length === candidates.length ? "取消全选" : "全选"}</button><button className="add-selected" disabled={!selected.length || state === "saving"} onClick={addSelected}>{state === "saving" ? "正在加入…" : `加入学习清单（${selected.length}）`}</button><button onClick={() => setOpenSections(openSections.length === 3 ? [] : ["related", "synonyms", "patterns"])}>{openSections.length === 3 ? "全部收起" : "全部展开"}</button><span>{message}</span></div>
       <label className="word-summary selectable">{checkbox("main", result.word)}<h4>{result.word}</h4><span>{result.wordType}</span><p>{result.meaning}</p></label>
-      <h5>相关词</h5>
-      <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>关系</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.relatedWords.map((item, index) => <tr key={`${item.word}-${item.relationship}`}><td>{checkbox(`related-${index}`, item.word)}</td><td>{item.word}</td><td>{item.relationship}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>
-      <h5>近义词与区别</h5>
-      <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文</th><th>细微区别</th></tr></thead><tbody>{result.synonyms.map((item, index) => <tr key={item.word}><td>{checkbox(`synonym-${index}`, item.word)}</td><td>{item.word}</td><td>{item.wordType}</td><td>{item.meaning}</td><td>{item.difference}</td></tr>)}</tbody></table></div>
-      <h5>同形词</h5>
-      <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>共同形式</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.patternWords.map((item, index) => <tr key={`${item.word}-${item.pattern}`}><td>{checkbox(`pattern-${index}`, item.word)}</td><td>{item.word}</td><td>{item.pattern}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>
+      <section className="fold-section">{sectionHeading("related", "相关词", result.relatedWords.length)}{openSections.includes("related") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>关系</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.relatedWords.map((item, index) => <tr key={`${item.word}-${item.relationship}`}><td>{checkbox(`related-${index}`, item.word)}</td><td>{item.word}</td><td>{item.relationship}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
+      <section className="fold-section">{sectionHeading("synonyms", "近义词与区别", result.synonyms.length)}{openSections.includes("synonyms") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文</th><th>细微区别</th></tr></thead><tbody>{result.synonyms.map((item, index) => <tr key={item.word}><td>{checkbox(`synonym-${index}`, item.word)}</td><td>{item.word}</td><td>{item.wordType}</td><td>{item.meaning}</td><td>{item.difference}</td></tr>)}</tbody></table></div>}</section>
+      <section className="fold-section">{sectionHeading("patterns", "同形词", result.patternWords.length)}{openSections.includes("patterns") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>共同形式</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.patternWords.map((item, index) => <tr key={`${item.word}-${item.pattern}`}><td>{checkbox(`pattern-${index}`, item.word)}</td><td>{item.word}</td><td>{item.pattern}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
     </div>}
   </section>;
 }

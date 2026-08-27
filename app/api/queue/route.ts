@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ensureStudyQueueTable } from "@/lib/db";
+import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -7,6 +7,9 @@ const clean = (value: unknown, limit: number) => typeof value === "string" ? val
 export async function GET() {
   try {
     const sql = await ensureStudyQueueTable();
+    await ensureWordsTable();
+    await sql`DELETE FROM study_queue a USING study_queue b WHERE a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
+    await sql`DELETE FROM study_queue q USING learned_words l WHERE LOWER(q.word) = LOWER(l.word)`;
     const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh, source_word, created_at FROM study_queue ORDER BY created_at DESC`;
     return NextResponse.json(rows);
   } catch (error) {
@@ -20,15 +23,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const items = Array.isArray(body.items) ? body.items.slice(0, 24) : [];
     const sql = await ensureStudyQueueTable();
+    await ensureWordsTable();
     let saved = 0;
     for (const item of items) {
       const word = clean(item.word, 120), wordType = clean(item.wordType, 40), meaning = clean(item.meaning, 500);
       const details = clean(item.details, 1000), sourceWord = clean(item.sourceWord, 120);
       if (!word || !wordType || !meaning) continue;
-      await sql`INSERT INTO study_queue (word, word_type_zh, meaning_zh, details_zh, source_word)
-        VALUES (${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord})
-        ON CONFLICT (word) DO UPDATE SET word_type_zh = EXCLUDED.word_type_zh, meaning_zh = EXCLUDED.meaning_zh,
-          details_zh = EXCLUDED.details_zh, source_word = EXCLUDED.source_word, created_at = NOW()`;
+      const learned = await sql`SELECT 1 FROM learned_words WHERE LOWER(word) = LOWER(${word}) LIMIT 1`;
+      if (learned.length) continue;
+      const existing = await sql`SELECT id FROM study_queue WHERE LOWER(word) = LOWER(${word}) LIMIT 1`;
+      if (existing.length) {
+        await sql`UPDATE study_queue SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, created_at = NOW() WHERE id = ${existing[0].id}`;
+      } else {
+        await sql`INSERT INTO study_queue (word, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord})`;
+      }
       saved += 1;
     }
     return NextResponse.json({ saved }, { status: 201 });

@@ -13,9 +13,13 @@ type Recognition = {
 declare global { interface Window { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition } }
 
 type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; learned_at: string };
-const sample = "Bonjour, bienvenue en France. Aujourd’hui, nous allons apprendre quelques mots ensemble.";
+const sample = "Je t’aime.";
 const wordTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];
 const splitWords = (value: string): string[] => Array.from(value.match(/[\p{L}\p{M}'’-]+/gu) ?? []);
+const defaultStudyWords: QueueWord[] = [
+  { id: -1, word: "Je", word_type_zh: "代词", meaning_zh: "我", details_zh: "第一人称单数主语代词", source_word: "默认文本", created_at: "" },
+  { id: -2, word: "t’aime", word_type_zh: "动词", meaning_zh: "爱你", details_zh: "te aime 的省音形式，来自动词 aimer", source_word: "默认文本", created_at: "" },
+];
 
 export default function Home() {
   const [text, setText] = useState(sample);
@@ -24,16 +28,17 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [playback, setPlayback] = useState<"once" | "repeat">("repeat");
   const [advance, setAdvance] = useState<"voice" | "button">("voice");
-  const [status, setStatus] = useState("Prêt");
-  const [wordType, setWordType] = useState("名词");
-  const [meaning, setMeaning] = useState("");
+  const [status, setStatus] = useState("准备就绪");
+  const [wordType, setWordType] = useState("代词");
+  const [meaning, setMeaning] = useState("我");
   const [learned, setLearned] = useState<LearnedWord[]>([]);
   const [saveStatus, setSaveStatus] = useState("");
-  const [details, setDetails] = useState("");
+  const [details, setDetails] = useState("第一人称单数主语代词");
   const [queue, setQueue] = useState<QueueWord[]>([]);
-  const [studyWords, setStudyWords] = useState<QueueWord[]>([]);
+  const [studyWords, setStudyWords] = useState<QueueWord[]>(defaultStudyWords);
   const [mode, setMode] = useState<"text" | "explore">("text");
-  const [textStatus, setTextStatus] = useState("");
+  const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
+  const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
   const editTimers = useRef<Record<number, number>>({});
 
   const mic = useRef<Recognition | null>(null);
@@ -61,7 +66,7 @@ export default function Home() {
   }, []);
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
-  function stop(label = "En pause") {
+  function stop(label = "已暂停") {
     active.current = false; setRunning(false); speechSynthesis.cancel();
     mic.current?.stop(); mic.current = null; setStatus(label);
   }
@@ -94,12 +99,12 @@ export default function Home() {
     speechSynthesis.cancel();
     if (!(await completeCurrentWord())) return;
     const nextIndex = position.current + 1;
-    if (nextIndex >= list.current.length) { stop("Terminé — très bien !"); return; }
+    if (nextIndex >= list.current.length) { stop("学习完成 — très bien !"); return; }
     position.current = nextIndex; setIndex(nextIndex); speak(list.current[nextIndex]);
   }
   function listen() {
     const RecognitionApi = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!RecognitionApi) { setStatus("Micro indisponible — choisissez Bouton"); return; }
+    if (!RecognitionApi) { setStatus("麦克风不可用，请选择按钮模式"); return; }
     const recognition = new RecognitionApi();
     recognition.continuous = true; recognition.interimResults = true; recognition.lang = "en-US";
     recognition.onresult = (event) => {
@@ -109,7 +114,7 @@ export default function Home() {
       if (/\b(ok|okay)\b/i.test(phrase) && now - lastAdvance.current > 1200) { lastAdvance.current = now; next(); }
     };
     recognition.onend = () => { if (active.current && advanceMode.current === "voice") try { recognition.start(); } catch {} };
-    recognition.onerror = () => setStatus("Micro bloqué — choisissez Bouton");
+    recognition.onerror = () => setStatus("麦克风被阻止，请选择按钮模式");
     mic.current = recognition; try { recognition.start(); } catch {}
   }
   function start() {
@@ -119,18 +124,18 @@ export default function Home() {
     const currentIndex = index < parsed.length ? index : 0;
     setWords(parsed); list.current = parsed; setIndex(currentIndex); position.current = currentIndex;
     active.current = true; setRunning(true);
-    setStatus(advance === "voice" ? "En attente de « OK »" : "点击下一个词");
+    setStatus(advance === "voice" ? "正在等待“OK”" : "点击下一个单词");
     speak(parsed[currentIndex]); if (advance === "voice") listen();
   }
   function chooseAdvance(value: "voice" | "button") {
     setAdvance(value); advanceMode.current = value;
     if (running) {
       mic.current?.stop(); mic.current = null;
-      setStatus(value === "voice" ? "En attente de « OK »" : "点击下一个词");
+      setStatus(value === "voice" ? "正在等待“OK”" : "点击下一个单词");
       if (value === "voice") window.setTimeout(listen, 100);
     }
   }
-  function reset() { stop("Prêt"); setIndex(0); position.current = 0; setMeaning(""); setDetails(""); setSaveStatus(""); }
+  function reset() { stop("准备就绪"); setIndex(0); position.current = 0; setMeaning(studyWords[0]?.meaning_zh ?? ""); setDetails(studyWords[0]?.details_zh ?? ""); setSaveStatus(""); }
 
   useEffect(() => () => { speechSynthesis.cancel(); mic.current?.stop(); }, []);
   const currentWord = words[index] ?? "—";
@@ -139,24 +144,24 @@ export default function Home() {
     if (!currentWord || currentWord === "—") return;
     const queued = studyWords[index];
     if (queued?.word === currentWord) {
-      setWordType(queued.word_type_zh); setMeaning(queued.meaning_zh); setDetails(queued.details_zh); setSaveStatus("点击“Mot suivant”后移入已学单词");
+      setWordType(queued.word_type_zh); setMeaning(queued.meaning_zh); setDetails(queued.details_zh); setSaveStatus("点击“下一个单词”后移入已学单词");
       return;
     }
     setWordType(""); setMeaning(""); setDetails(""); setSaveStatus("请先确认文本并生成全部词义");
   }, [currentWord, index, studyWords]);
 
   function beginStudy(items: QueueWord[]) {
-    stop("Prêt à apprendre"); setStudyWords(items); const selectedWords = items.map((item) => item.word);
+    stop("准备学习"); setStudyWords(items); const selectedWords = items.map((item) => item.word);
     studyItems.current = items;
     setWords(selectedWords); list.current = selectedWords; setIndex(0); position.current = 0;
-    setWordType(items[0].word_type_zh); setMeaning(items[0].meaning_zh); setDetails(items[0].details_zh); setSaveStatus("点击“Commencer”开始学习");
+    setWordType(items[0].word_type_zh); setMeaning(items[0].meaning_zh); setDetails(items[0].details_zh); setSaveStatus("点击“开始”进入学习");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function prepareText() {
     const parsed = splitWords(text);
     if (!parsed.length) { setTextStatus("请输入法语文本"); return; }
-    setTextStatus("正在生成全部词性和释义…"); stop("Préparation du vocabulaire");
+    setTextStatus("正在生成全部词性和释义…"); stop("正在准备词汇");
     try {
       const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: parsed }) });
       if (!response.ok) throw new Error();
@@ -176,6 +181,13 @@ export default function Home() {
   async function deleteLearnedWord(id: number) {
     if (!(await fetch(`/api/words?id=${id}`, { method: "DELETE" })).ok) { setSaveStatus("删除失败"); return; }
     setLearned((items) => items.filter((item) => item.id !== id)); setSaveStatus("已删除已学单词");
+  }
+
+  async function deleteSelectedLearned() {
+    const ids = [...selectedLearned];
+    const responses = await Promise.all(ids.map((id) => fetch(`/api/words?id=${id}`, { method: "DELETE" })));
+    if (responses.some((response) => !response.ok)) { setSaveStatus("部分单词删除失败"); await loadLearned(); return; }
+    setLearned((items) => items.filter((item) => !ids.includes(item.id))); setSelectedLearned([]); setSaveStatus(`已删除 ${ids.length} 个已学单词`);
   }
 
   async function moveBackToQueue(item: LearnedWord) {
@@ -212,19 +224,19 @@ export default function Home() {
   return <main>
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div></header>
     <section className="card">
-      <nav className="primary-switch"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>Texte français</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button></nav>
-      {mode === "text" ? <section className="text-preparation"><label htmlFor="text">Texte français</label>
-        <textarea id="text" value={text} onChange={(event) => { stop("Prêt"); setStudyWords([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
-        <div className="confirm-row"><span>{splitWords(text).length} mots</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
+      <nav className="primary-switch"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button></nav>
+      {mode === "text" ? <section className="text-preparation"><label htmlFor="text">法语文本</label>
+        <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
+        <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
       </section> : <VocabExplorer onQueued={loadQueue} />}
       <div className="options">
-        <fieldset><legend>Passage au mot suivant</legend><div><button className={advance === "voice" ? "selected" : ""} onClick={() => chooseAdvance("voice")}><b>Voix</b><small>Dites « OK »</small></button><button className={advance === "button" ? "selected" : ""} onClick={() => chooseAdvance("button")}><b>Bouton</b><small>Cliquez pour continuer</small></button></div></fieldset>
-        <fieldset><legend>Lecture</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>Une fois</b><small>Une seule lecture</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>Répéter</b><small>Toutes les 3 s</small></button></div></fieldset>
+        <fieldset><legend>切换到下一个词</legend><div><button className={advance === "voice" ? "selected" : ""} onClick={() => chooseAdvance("voice")}><b>语音</b><small>说“OK”</small></button><button className={advance === "button" ? "selected" : ""} onClick={() => chooseAdvance("button")}><b>按钮</b><small>点击继续</small></button></div></fieldset>
+        <fieldset><legend>播放方式</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>播放一次</b><small>仅播放一遍</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>重复播放</b><small>每 3 秒一次</small></button></div></fieldset>
       </div>
       <section className="player">
-        <div className="meta"><span>Mot {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
+        <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
         <div className="study-sides"><div className="french-side"><small>Français</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
-        <div className="actions">{running ? <button className="start" onClick={() => stop()}>Pause</button> : <button className="start" onClick={start}>Commencer</button>}<button className="next" onClick={next}>Mot suivant →</button><button className="reset" onClick={reset}>Réinitialiser</button></div>
+        <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
       <section className="save-panel">
         <div><p className="panel-kicker">学习进度</p><h3>{currentWord}</h3></div>
@@ -234,8 +246,8 @@ export default function Home() {
       </section>
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">
-        <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span></div>
-        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table><thead><tr><th>法语</th><th>词性</th><th>中文释义</th><th>操作</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回学习清单</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</tbody></table></div>}
+        <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span>{learned.length > 0 && <div className="list-bulk-actions"><button onClick={() => setSelectedLearned(selectedLearned.length === learned.length ? [] : learned.map((item) => item.id))}>{selectedLearned.length === learned.length ? "取消全选" : "全选"}</button><button className="danger-link" disabled={!selectedLearned.length} onClick={deleteSelectedLearned}>删除已选（{selectedLearned.length}）</button></div>}</div>
+        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table className="learned-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文释义</th><th>操作</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input aria-label={`选择 ${item.word}`} type="checkbox" checked={selectedLearned.includes(item.id)} onChange={() => setSelectedLearned((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回学习清单</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</tbody></table></div>}
       </section>
     </section>
     <footer>Utilise la voix française de votre navigateur.</footer>

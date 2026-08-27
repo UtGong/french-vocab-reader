@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { ensureWordsTable } from "@/lib/db";
+import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const sql = await ensureWordsTable();
+    await ensureStudyQueueTable();
+    await sql`DELETE FROM learned_words a USING learned_words b WHERE a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
     const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, learned_at FROM learned_words ORDER BY learned_at DESC`;
     return NextResponse.json(rows);
   } catch (error) {
@@ -24,10 +26,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
     const sql = await ensureWordsTable();
-    const rows = await sql`INSERT INTO learned_words (word, word_type_zh, meaning_zh)
-      VALUES (${word}, ${wordType}, ${meaning})
-      ON CONFLICT (word) DO UPDATE SET word_type_zh = EXCLUDED.word_type_zh, meaning_zh = EXCLUDED.meaning_zh, learned_at = NOW()
-      RETURNING id, word, word_type_zh, meaning_zh, learned_at`;
+    await ensureStudyQueueTable();
+    const existing = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) LIMIT 1`;
+    const rows = existing.length
+      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, learned_at = NOW() WHERE id = ${existing[0].id} RETURNING id, word, word_type_zh, meaning_zh, learned_at`
+      : await sql`INSERT INTO learned_words (word, word_type_zh, meaning_zh) VALUES (${word}, ${wordType}, ${meaning}) RETURNING id, word, word_type_zh, meaning_zh, learned_at`;
+    await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error("Unable to save learned word", error);
@@ -46,11 +50,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
     const sql = await ensureWordsTable();
+    await ensureStudyQueueTable();
+    const duplicate = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) AND id <> ${id} LIMIT 1`;
+    if (duplicate.length) return NextResponse.json({ error: "Duplicate word" }, { status: 409 });
     const rows = await sql`UPDATE learned_words
       SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, learned_at = NOW()
       WHERE id = ${id}
       RETURNING id, word, word_type_zh, meaning_zh, learned_at`;
     if (!rows[0]) return NextResponse.json({ error: "Word not found" }, { status: 404 });
+    await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error("Unable to update learned word", error);

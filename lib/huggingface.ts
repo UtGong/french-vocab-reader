@@ -12,7 +12,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
       temperature: 0.15,
       max_tokens: maxTokens,
       top_p: 0.8,
-      extra_body: { chat_template_kwargs: { enable_thinking: false } },
+      chat_template_kwargs: { enable_thinking: false },
       messages: [
         { role: "system", content: "You are a careful French lexicographer and French-to-Simplified-Chinese teacher. Return only valid JSON. Never invent a word or an etymological relationship." },
         { role: "user", content: prompt },

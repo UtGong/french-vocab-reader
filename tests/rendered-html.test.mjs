@@ -28,11 +28,14 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /fetch\("\/api\/words"/);
   assert.match(page, /fetch\(`\/api\/queue\?id=/);
   assert.match(page, /await completeCurrentWord/);
+  assert.match(page, /确认文本并生成词义/);
+  assert.match(page, /fetch\("\/api\/analyze-text"/);
+  assert.doesNotMatch(page, /fetch\("\/api\/analyze"/);
 });
 
 test("uses the configured Hugging Face model without exposed credentials", async () => {
   const helper = await read("../lib/huggingface.ts");
-  assert.match(helper, /Qwen\/Qwen3\.5-122B-A10B:cheapest/);
+  assert.match(helper, /Qwen\/Qwen3\.5-27B:novita/);
   assert.match(helper, /process\.env\.HF_TOKEN/);
   assert.match(helper, /enable_thinking: false/);
   assert.doesNotMatch(helper, /hf_[A-Za-z0-9]+/);

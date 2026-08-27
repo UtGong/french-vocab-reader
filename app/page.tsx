@@ -32,6 +32,8 @@ export default function Home() {
   const [details, setDetails] = useState("");
   const [queue, setQueue] = useState<QueueWord[]>([]);
   const [studyWords, setStudyWords] = useState<QueueWord[]>([]);
+  const [mode, setMode] = useState<"text" | "explore">("text");
+  const [textStatus, setTextStatus] = useState("");
   const editTimers = useRef<Record<number, number>>({});
 
   const mic = useRef<Recognition | null>(null);
@@ -54,7 +56,8 @@ export default function Home() {
   }, []);
   useEffect(() => { loadLearned(); }, [loadLearned]);
   const loadQueue = useCallback(async () => {
-    try { const response = await fetch("/api/queue"); if (response.ok) setQueue(await response.json()); } catch {}
+    try { const response = await fetch("/api/queue"); if (response.ok) { const items = await response.json(); setQueue(items); return items as QueueWord[]; } } catch {}
+    return [] as QueueWord[];
   }, []);
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
@@ -110,7 +113,8 @@ export default function Home() {
     mic.current = recognition; try { recognition.start(); } catch {}
   }
   function start() {
-    const parsed = studyWords.length ? studyWords.map((item) => item.word) : splitWords(text);
+    if (!studyWords.length) { setStatus("Confirm the text or choose words from 学习清单 first"); return; }
+    const parsed = studyWords.map((item) => item.word);
     if (!parsed.length) { setStatus("Enter French text first"); return; }
     const currentIndex = index < parsed.length ? index : 0;
     setWords(parsed); list.current = parsed; setIndex(currentIndex); position.current = currentIndex;
@@ -138,17 +142,7 @@ export default function Home() {
       setWordType(queued.word_type_zh); setMeaning(queued.meaning_zh); setDetails(queued.details_zh); setSaveStatus("点击 Next 后移入已学单词");
       return;
     }
-    const controller = new AbortController();
-    setWordType(""); setMeaning(""); setDetails(""); setSaveStatus("正在生成词性和释义…");
-    fetch("/api/analyze", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word: currentWord }), signal: controller.signal,
-    }).then(async (response) => {
-      if (!response.ok) throw new Error();
-      const result = await response.json();
-      setWordType(result.wordType); setMeaning(result.meaning); setSaveStatus("点击 Next 后移入已学单词");
-    }).catch((error) => { if (error.name !== "AbortError") setSaveStatus("无法自动生成，请稍后重试"); });
-    return () => controller.abort();
+    setWordType(""); setMeaning(""); setDetails(""); setSaveStatus("请先确认文本并生成全部词义");
   }, [currentWord, index, studyWords]);
 
   function beginStudy(items: QueueWord[]) {
@@ -157,6 +151,25 @@ export default function Home() {
     setWords(selectedWords); list.current = selectedWords; setIndex(0); position.current = 0;
     setWordType(items[0].word_type_zh); setMeaning(items[0].meaning_zh); setDetails(items[0].details_zh); setSaveStatus("点击 Start 开始学习");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function prepareText() {
+    const parsed = splitWords(text);
+    if (!parsed.length) { setTextStatus("请输入法语文本"); return; }
+    setTextStatus("正在生成全部词性和释义…"); stop("Preparing vocabulary");
+    try {
+      const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: parsed }) });
+      if (!response.ok) throw new Error();
+      const generated = await response.json();
+      const items = generated.items.map((item: { word: string; wordType: string; meaning: string }) => ({ ...item, details: "来自已确认文本", sourceWord: "文本学习" }));
+      const saved = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+      if (!saved.ok) throw new Error();
+      const allQueued = await loadQueue();
+      const byWord = new Map(allQueued.map((item) => [item.word.toLocaleLowerCase("fr"), item]));
+      const prepared = parsed.map((word) => byWord.get(word.toLocaleLowerCase("fr"))).filter((item): item is QueueWord => Boolean(item));
+      if (prepared.length !== parsed.length) throw new Error();
+      beginStudy(prepared); setTextStatus(`已生成 ${prepared.length} 个词汇，可以开始学习`);
+    } catch { setTextStatus("AI 生成失败，请检查设置后重试"); }
   }
 
   function editLearned(id: number, field: "word" | "word_type_zh" | "meaning_zh", value: string) {
@@ -181,9 +194,11 @@ export default function Home() {
   return <main>
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div></header>
     <section className="card">
-      <label htmlFor="text">French text</label>
-      <textarea id="text" value={text} onChange={(event) => { stop("Ready"); setStudyWords([]); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
-      <p className="count">{splitWords(text).length} words</p>
+      <nav className="primary-switch"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>French text</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button></nav>
+      {mode === "text" ? <section className="text-preparation"><label htmlFor="text">French text</label>
+        <textarea id="text" value={text} onChange={(event) => { stop("Ready"); setStudyWords([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
+        <div className="confirm-row"><span>{splitWords(text).length} words</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
+      </section> : <VocabExplorer onQueued={loadQueue} />}
       <div className="options">
         <fieldset><legend>Move to next word</legend><div><button className={advance === "voice" ? "selected" : ""} onClick={() => chooseAdvance("voice")}><b>Voice</b><small>Say “OK”</small></button><button className={advance === "button" ? "selected" : ""} onClick={() => chooseAdvance("button")}><b>Button</b><small>Press Next</small></button></div></fieldset>
         <fieldset><legend>Playback</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>Once</b><small>Play one time</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>Repeat</b><small>Every 3 sec</small></button></div></fieldset>
@@ -204,7 +219,6 @@ export default function Home() {
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span></div>
         {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table><thead><tr><th>法语</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td></tr>)}</tbody></table></div>}
       </section>
-      <VocabExplorer onQueued={loadQueue} />
     </section>
     <footer>Uses your browser’s French voice.</footer>
   </main>;

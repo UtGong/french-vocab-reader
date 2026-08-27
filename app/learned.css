@@ -48,3 +48,13 @@
 .queue-grid em { margin-top: 5px; font-size: 9px; color: var(--green); }
 .queued-note { margin: 0 0 10px; color: var(--green); font-size: 11px; font-weight: 700; }
 @media (max-width: 700px) { .study-sides, .queue-grid { grid-template-columns: 1fr; } .french-side, .chinese-side { min-height: 120px; } }
+.primary-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 20px; padding: 5px; border-radius: 9px; background: #f1efe8; }
+.primary-switch button { padding: 11px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; }
+.primary-switch button.active { background: white; color: var(--green); box-shadow: 0 2px 10px #17211f10; }
+.text-preparation { margin-bottom: 20px; }
+.confirm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.confirm-row span { color: var(--muted); font-size: 10px; }
+.confirm-row button { padding: 10px 14px; border: 0; border-radius: 7px; background: var(--green); color: white; font-size: 11px; font-weight: 700; cursor: pointer; }
+.confirm-row button:disabled { opacity: .6; cursor: wait; }
+.text-status { min-height: 15px; margin: 7px 0 0; color: var(--green); font-size: 10px; text-align: right; }
+.primary-switch + .vocab-explorer { margin-top: 0; margin-bottom: 20px; }

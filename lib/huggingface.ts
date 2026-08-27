@@ -1,4 +1,4 @@
-const MODEL = "Qwen/Qwen3.5-122B-A10B:cheapest";
+const MODEL = "Qwen/Qwen3.5-27B:novita";
 
 export async function askLanguageModel(prompt: string, maxTokens = 1200) {
   const token = process.env.HF_TOKEN;
@@ -18,7 +18,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
         { role: "user", content: prompt },
       ],
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(25000),
   });
   if (!response.ok) throw new Error(`Hugging Face returned ${response.status}: ${await response.text()}`);
   const payload = await response.json();

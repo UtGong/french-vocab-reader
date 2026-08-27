@@ -35,6 +35,8 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(queue, /删除/);
   assert.match(queue, /删除已选/);
   assert.match(queue, /className="queue-table"/);
+  assert.match(queue, /className="vocab-group"/);
+  assert.match(queue, /关系 \/ 用法/);
   assert.match(page, /确认文本并生成词义/);
   assert.match(page, /fetch\("\/api\/analyze-text"/);
   assert.doesNotMatch(page, /fetch\("\/api\/analyze"/);
@@ -48,6 +50,8 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, />开始</);
   assert.match(page, /selectedLearned/);
   assert.match(page, /deleteSelectedLearned/);
+  assert.match(page, /learnedGroups\.map/);
+  assert.match(page, /details: item\.details_zh/);
   assert.doesNotMatch(page, /SpeechRecognition|webkitSpeechRecognition|chooseAdvance|正在等待“OK”/);
   assert.match(page, /speechSynthesis\.getVoices\(\)\.find/);
   assert.match(page, /speechSynthesis\.resume\(\)/);
@@ -77,6 +81,14 @@ test("prevents duplicates within and across persistent lists", async () => {
   assert.match(queueRoute, /SELECT 1 FROM learned_words WHERE LOWER\(word\)/);
   assert.match(queueRoute, /DELETE FROM study_queue q USING learned_words l/);
   assert.match(queueRoute, /DELETE FROM study_queue a USING study_queue b/);
+});
+
+test("preserves grouping context when words move between lists", async () => {
+  const [database, wordsRoute] = await Promise.all([read("../lib/db.ts"), read("../app/api/words/route.ts")]);
+  assert.match(database, /ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS details_zh/);
+  assert.match(database, /ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS source_word/);
+  assert.match(wordsRoute, /details_zh, source_word, learned_at/);
+  assert.match(wordsRoute, /details_zh = \$\{details\}, source_word = \$\{sourceWord\}/);
 });
 
 test("uses the configured Hugging Face model without exposed credentials", async () => {

@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 
-export type WordRow = { id: number; word: string; word_type_zh: string; meaning_zh: string; learned_at: string };
+export type WordRow = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 
 export function database() {
   const url = process.env.DATABASE_URL;
@@ -17,6 +17,8 @@ export async function ensureWordsTable() {
     meaning_zh TEXT NOT NULL,
     learned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS details_zh TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS source_word TEXT NOT NULL DEFAULT ''`;
   return sql;
 }
 

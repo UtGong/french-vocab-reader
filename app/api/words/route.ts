@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
 
 export async function GET() {
   try {
     const sql = await ensureWordsTable();
     await ensureStudyQueueTable();
     await sql`DELETE FROM learned_words a USING learned_words b WHERE a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
-    const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, learned_at FROM learned_words ORDER BY learned_at DESC`;
+    const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at FROM learned_words ORDER BY learned_at DESC`;
     return NextResponse.json(rows);
   } catch (error) {
     console.error("Unable to load learned words", error);
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
     const word = typeof body.word === "string" ? body.word.trim() : "";
     const wordType = typeof body.wordType === "string" ? body.wordType.trim() : "";
     const meaning = typeof body.meaning === "string" ? body.meaning.trim() : "";
+    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120);
     if (!word || !wordType || !meaning || word.length > 120 || wordType.length > 40 || meaning.length > 500) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
@@ -29,8 +31,8 @@ export async function POST(request: Request) {
     await ensureStudyQueueTable();
     const existing = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) LIMIT 1`;
     const rows = existing.length
-      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, learned_at = NOW() WHERE id = ${existing[0].id} RETURNING id, word, word_type_zh, meaning_zh, learned_at`
-      : await sql`INSERT INTO learned_words (word, word_type_zh, meaning_zh) VALUES (${word}, ${wordType}, ${meaning}) RETURNING id, word, word_type_zh, meaning_zh, learned_at`;
+      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW() WHERE id = ${existing[0].id} RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
+      : await sql`INSERT INTO learned_words (word, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
@@ -46,6 +48,7 @@ export async function PATCH(request: Request) {
     const word = typeof body.word === "string" ? body.word.trim() : "";
     const wordType = typeof body.wordType === "string" ? body.wordType.trim() : "";
     const meaning = typeof body.meaning === "string" ? body.meaning.trim() : "";
+    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120);
     if (!Number.isInteger(id) || id < 1 || !word || !wordType || !meaning || word.length > 120 || wordType.length > 40 || meaning.length > 500) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
@@ -54,9 +57,9 @@ export async function PATCH(request: Request) {
     const duplicate = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) AND id <> ${id} LIMIT 1`;
     if (duplicate.length) return NextResponse.json({ error: "Duplicate word" }, { status: 409 });
     const rows = await sql`UPDATE learned_words
-      SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, learned_at = NOW()
+      SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW()
       WHERE id = ${id}
-      RETURNING id, word, word_type_zh, meaning_zh, learned_at`;
+      RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     if (!rows[0]) return NextResponse.json({ error: "Word not found" }, { status: 404 });
     await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0]);

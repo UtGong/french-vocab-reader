@@ -53,6 +53,20 @@
 .queue-table td:first-child { font: inherit; }
 .queue-table td:nth-child(2) { font: italic 16px Georgia, serif; font-weight: 700; }
 .queue-table tr.chosen { background: var(--soft); }
+.vocabulary-storage { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.vocabulary-storage table { min-width: 980px; margin-top: 0; }
+.vocabulary-storage thead { position: sticky; top: 0; z-index: 1; background: #f8f7f3; }
+.vocabulary-storage th { white-space: nowrap; }
+.vocabulary-storage td { vertical-align: middle; line-height: 1.45; }
+.vocabulary-storage .vocab-group th { padding: 9px 12px; background: #eef4f1; border-top: 1px solid #cadbd6; color: var(--green); text-align: left; text-transform: none; }
+.vocab-group th span { margin-right: 8px; padding: 3px 7px; border-radius: 10px; background: var(--green); color: white; font-size: 8px; letter-spacing: .4px; }
+.vocab-group th b { font-size: 12px; }
+.vocab-group th em { margin-left: 8px; color: var(--muted); font-size: 9px; font-style: normal; font-weight: 400; }
+.type-badge { display: inline-block; padding: 3px 7px; border-radius: 10px; background: var(--soft); color: var(--green); font-size: 9px; white-space: nowrap; }
+.detail-cell { max-width: 260px; color: #3f4946; font-size: 11px; }
+.date-cell { color: var(--muted); font-size: 9px; white-space: nowrap; }
+.learned-table td:nth-child(2) input { min-width: 7rem; font: italic 16px Georgia, serif; font-weight: 700; }
+.learned-table td:nth-child(5) input { min-width: 14rem; color: #3f4946; }
 .queue-table button, .row-actions button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 9px; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .queue-table .danger-link, .row-actions .danger-link { color: #a33d2d; border-color: #e5c2bb; }
 .row-actions { display: flex; gap: 5px; }

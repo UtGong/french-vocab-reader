@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VocabExplorer from "./components/VocabExplorer";
 import StudyQueue, { QueueWord } from "./components/StudyQueue";
 
-type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; learned_at: string };
+type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 const sample = "Je t’aime.";
 const frenchLevels = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 const wordTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];
@@ -32,6 +32,11 @@ export default function Home() {
   const [mode, setMode] = useState<"text" | "explore">("text");
   const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
+  const learnedGroups = useMemo(() => {
+    const grouped = new Map<string, LearnedWord[]>();
+    learned.forEach((item) => { const name = item.source_word || "独立词汇"; grouped.set(name, [...(grouped.get(name) ?? []), item]); });
+    return Array.from(grouped.entries());
+  }, [learned]);
   const editTimers = useRef<Record<number, number>>({});
 
   const speechTimer = useRef<number | null>(null);
@@ -92,9 +97,9 @@ export default function Home() {
     if (!word || !currentType || !currentMeaning.trim()) { setSaveStatus("词义尚未生成，请稍候"); return false; }
     setSaveStatus("正在移入已学单词…");
     try {
-      const response = await fetch("/api/words", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word, wordType: currentType, meaning: currentMeaning.trim() }) });
-      if (!response.ok) throw new Error();
       const queued = studyItems.current[position.current];
+      const response = await fetch("/api/words", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word, wordType: currentType, meaning: currentMeaning.trim(), details: queued?.details_zh || "", sourceWord: queued?.source_word || "文本学习" }) });
+      if (!response.ok) throw new Error();
       if (queued?.id > 0) await fetch(`/api/queue?id=${queued.id}`, { method: "DELETE" });
       await Promise.all([loadLearned(), loadQueue()]);
       setSaveStatus("已加入已学单词"); return true;
@@ -175,18 +180,18 @@ export default function Home() {
   }
 
   async function moveBackToQueue(item: LearnedWord) {
-    const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ word: item.word, wordType: item.word_type_zh, meaning: item.meaning_zh, details: "从已学单词移回", sourceWord: item.word }] }) });
+    const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ word: item.word, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh || "从已学单词移回", sourceWord: item.source_word || item.word }] }) });
     if (!response.ok) { setSaveStatus("移动失败"); return; }
     await deleteLearnedWord(item.id); await loadQueue(); setSaveStatus("已移回学习清单");
   }
 
   async function markQueueWordLearned(item: QueueWord) {
-    const response = await fetch("/api/words", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word: item.word, wordType: item.word_type_zh, meaning: item.meaning_zh }) });
+    const response = await fetch("/api/words", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word: item.word, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh, sourceWord: item.source_word }) });
     if (!response.ok) { setSaveStatus("移动失败"); return; }
     await deleteQueueWord(item.id); await loadLearned(); setSaveStatus("已移入已学单词");
   }
 
-  function editLearned(id: number, field: "word" | "word_type_zh" | "meaning_zh", value: string) {
+  function editLearned(id: number, field: "word" | "word_type_zh" | "meaning_zh" | "details_zh" | "source_word", value: string) {
     const current = learned.find((item) => item.id === id);
     if (!current) return;
     const changed = { ...current, [field]: value };
@@ -197,7 +202,7 @@ export default function Home() {
       try {
         const response = await fetch("/api/words", {
           method: "PATCH", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, word: changed.word, wordType: changed.word_type_zh, meaning: changed.meaning_zh }),
+          body: JSON.stringify({ id, word: changed.word, wordType: changed.word_type_zh, meaning: changed.meaning_zh, details: changed.details_zh, sourceWord: changed.source_word }),
         });
         if (!response.ok) throw new Error();
         setSaveStatus("修改已保存");
@@ -231,7 +236,7 @@ export default function Home() {
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span>{learned.length > 0 && <div className="list-bulk-actions"><button onClick={() => setSelectedLearned(selectedLearned.length === learned.length ? [] : learned.map((item) => item.id))}>{selectedLearned.length === learned.length ? "取消全选" : "全选"}</button><button className="danger-link" disabled={!selectedLearned.length} onClick={deleteSelectedLearned}>删除已选（{selectedLearned.length}）</button></div>}</div>
-        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table className="learned-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文释义</th><th>操作</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input aria-label={`选择 ${item.word}`} type="checkbox" checked={selectedLearned.includes(item.id)} onChange={() => setSelectedLearned((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回学习清单</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</tbody></table></div>}
+        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap vocabulary-storage"><table className="learned-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文释义</th><th>关系 / 用法</th><th>学习日期</th><th>操作</th></tr></thead><tbody>{learnedGroups.map(([group, groupItems]) => <Fragment key={group}><tr className="vocab-group"><th colSpan={7}><span>词汇组</span><b>{group}</b><em>{groupItems.length} 个词</em></th></tr>{groupItems.map((item) => <tr key={item.id}><td><input aria-label={`选择 ${item.word}`} type="checkbox" checked={selectedLearned.includes(item.id)} onChange={() => setSelectedLearned((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td><input aria-label="法语" value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select aria-label="词性" value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input aria-label="中文释义" value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><input aria-label="关系或用法" value={item.details_zh} placeholder="补充关系或用法" onChange={(event) => editLearned(item.id, "details_zh", event.target.value)} /></td><td className="date-cell">{new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" }).format(new Date(item.learned_at))}</td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回学习清单</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</Fragment>)}</tbody></table></div>}
       </section>
     </section>
     <footer>Utilise la voix française de votre navigateur.</footer>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import VocabExplorer from "./components/VocabExplorer";
 
 type Recognition = {
   continuous: boolean; interimResults: boolean; lang: string;
@@ -178,6 +179,7 @@ export default function Home() {
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span></div>
         {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table><thead><tr><th>法语</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td></tr>)}</tbody></table></div>}
       </section>
+      <VocabExplorer />
     </section>
     <footer>Uses your browser’s French voice.</footer>
   </main>;

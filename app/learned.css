@@ -4,3 +4,22 @@
 .learned-list table input:hover, .learned-list table select:hover, .learned-list table input:focus, .learned-list table select:focus { border-color: #d7d2c6; background: #fff; outline: none; }
 .learned-list table td:first-child input { font-weight: 650; }
 @media (max-width: 700px) { .save-panel .save-status { grid-column: 1; } .learned-list table input, .learned-list table select { min-width: 6.5rem; } }
+.vocab-explorer { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: #fbfaf6; }
+.explorer-heading { display: flex; align-items: center; justify-content: space-between; }
+.explorer-heading h3 { margin: 0; font: 700 18px Georgia, serif; }
+.explorer-heading > span { padding: 4px 9px; border-radius: 12px; background: var(--soft); color: var(--green); font-size: 10px; font-weight: 700; }
+.vocab-explorer form { margin-top: 16px; }
+.vocab-explorer form > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 7px; }
+.vocab-explorer form input { min-width: 0; height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; font: italic 17px Georgia, serif; }
+.vocab-explorer form button { height: 42px; padding: 0 16px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 700; cursor: pointer; }
+.vocab-explorer form button:disabled { opacity: .65; cursor: wait; }
+.explorer-error { color: #a23b2a; font-size: 12px; }
+.explorer-result { margin-top: 20px; }
+.word-summary { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 9px; padding: 14px; border-radius: 8px; background: var(--green); color: white; }
+.word-summary h4 { margin: 0; font: italic 25px Georgia, serif; }
+.word-summary span { padding: 3px 7px; border-radius: 10px; background: #ffffff20; font-size: 10px; }
+.word-summary p { margin: 0; text-align: right; font-size: 13px; }
+.explorer-result h5 { margin: 20px 0 4px; font-size: 13px; }
+.explorer-result td:first-child { white-space: nowrap; }
+.explorer-result td:nth-child(2), .explorer-result td:nth-child(3), .explorer-result td:nth-child(4) { line-height: 1.45; }
+@media (max-width: 700px) { .vocab-explorer { padding: 16px; } .vocab-explorer form > div { grid-template-columns: 1fr; } .word-summary { grid-template-columns: auto 1fr; } .word-summary p { grid-column: 1 / -1; text-align: left; } }

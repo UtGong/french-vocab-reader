@@ -45,10 +45,13 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /const sample = "Je t’aime\."/);
   assert.match(page, /word: "Je", word_type_zh: "代词", meaning_zh: "我"/);
   assert.match(page, />法语文本</);
-  assert.match(page, />切换到下一个词</);
   assert.match(page, />开始</);
   assert.match(page, /selectedLearned/);
   assert.match(page, /deleteSelectedLearned/);
+  assert.doesNotMatch(page, /SpeechRecognition|webkitSpeechRecognition|chooseAdvance|正在等待“OK”/);
+  assert.match(page, /speechSynthesis\.getVoices\(\)\.find/);
+  assert.match(page, /speechSynthesis\.resume\(\)/);
+  assert.match(page, /下一个单词 →/);
 });
 
 test("prevents duplicates within and across persistent lists", async () => {

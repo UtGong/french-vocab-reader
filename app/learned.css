@@ -78,3 +78,4 @@
 .confirm-row button:disabled { opacity: .6; cursor: wait; }
 .text-status { min-height: 15px; margin: 7px 0 0; color: var(--green); font-size: 10px; text-align: right; }
 .primary-switch + .vocab-explorer { margin-top: 0; margin-bottom: 20px; }
+.options.playback-only { grid-template-columns: 1fr; }

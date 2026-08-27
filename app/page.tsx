@@ -4,14 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import VocabExplorer from "./components/VocabExplorer";
 import StudyQueue, { QueueWord } from "./components/StudyQueue";
 
-type Recognition = {
-  continuous: boolean; interimResults: boolean; lang: string;
-  start(): void; stop(): void;
-  onresult: ((event: any) => void) | null;
-  onend: (() => void) | null; onerror: (() => void) | null;
-};
-declare global { interface Window { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition } }
-
 type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; learned_at: string };
 const sample = "Je t’aime.";
 const wordTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];
@@ -27,7 +19,6 @@ export default function Home() {
   const [index, setIndex] = useState(0);
   const [running, setRunning] = useState(false);
   const [playback, setPlayback] = useState<"once" | "repeat">("repeat");
-  const [advance, setAdvance] = useState<"voice" | "button">("voice");
   const [status, setStatus] = useState("准备就绪");
   const [wordType, setWordType] = useState("代词");
   const [meaning, setMeaning] = useState("我");
@@ -41,10 +32,10 @@ export default function Home() {
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
   const editTimers = useRef<Record<number, number>>({});
 
-  const mic = useRef<Recognition | null>(null);
+  const speechTimer = useRef<number | null>(null);
   const active = useRef(false), position = useRef(0), list = useRef(words);
   const wordTypeNow = useRef(wordType), meaningNow = useRef(meaning), studyItems = useRef(studyWords);
-  const playMode = useRef(playback), advanceMode = useRef(advance), lastAdvance = useRef(0);
+  const playMode = useRef(playback);
   useEffect(() => { active.current = running; }, [running]);
   useEffect(() => { position.current = index; }, [index]);
   useEffect(() => { list.current = words; }, [words]);
@@ -68,18 +59,30 @@ export default function Home() {
 
   function stop(label = "已暂停") {
     active.current = false; setRunning(false); speechSynthesis.cancel();
-    mic.current?.stop(); mic.current = null; setStatus(label);
+    if (speechTimer.current !== null) window.clearTimeout(speechTimer.current);
+    speechTimer.current = null; setStatus(label);
   }
   function speak(word: string) {
+    if (speechTimer.current !== null) window.clearTimeout(speechTimer.current);
     speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = "fr-FR"; utterance.rate = 0.72;
-    utterance.onend = () => {
-      if (active.current && playMode.current === "repeat" && list.current[position.current] === word) {
-        window.setTimeout(() => speak(word), 3000);
-      }
-    };
-    speechSynthesis.speak(utterance);
+    speechSynthesis.resume();
+    speechTimer.current = window.setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(word);
+      const frenchVoice = speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith("fr"));
+      if (frenchVoice) utterance.voice = frenchVoice;
+      utterance.lang = frenchVoice?.lang || "fr-FR"; utterance.rate = 0.72; utterance.volume = 1;
+      utterance.onstart = () => setStatus("正在播放法语发音");
+      utterance.onerror = () => setStatus("无法播放发音，请检查浏览器声音设置");
+      utterance.onend = () => {
+        setStatus("点击“下一个单词”继续");
+        if (active.current && playMode.current === "repeat" && list.current[position.current] === word) {
+          speechTimer.current = window.setTimeout(() => {
+            if (active.current && playMode.current === "repeat" && list.current[position.current] === word) speak(word);
+          }, 3000);
+        }
+      };
+      speechSynthesis.speak(utterance);
+    }, 80);
   }
   async function completeCurrentWord() {
     const word = list.current[position.current];
@@ -97,25 +100,12 @@ export default function Home() {
   }
   async function next() {
     speechSynthesis.cancel();
+    if (speechTimer.current !== null) window.clearTimeout(speechTimer.current);
+    speechTimer.current = null;
     if (!(await completeCurrentWord())) return;
     const nextIndex = position.current + 1;
     if (nextIndex >= list.current.length) { stop("学习完成 — très bien !"); return; }
     position.current = nextIndex; setIndex(nextIndex); speak(list.current[nextIndex]);
-  }
-  function listen() {
-    const RecognitionApi = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!RecognitionApi) { setStatus("麦克风不可用，请选择按钮模式"); return; }
-    const recognition = new RecognitionApi();
-    recognition.continuous = true; recognition.interimResults = true; recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      let phrase = "";
-      for (let i = 0; i < event.results.length; i += 1) phrase += ` ${event.results[i][0].transcript}`;
-      const now = Date.now();
-      if (/\b(ok|okay)\b/i.test(phrase) && now - lastAdvance.current > 1200) { lastAdvance.current = now; next(); }
-    };
-    recognition.onend = () => { if (active.current && advanceMode.current === "voice") try { recognition.start(); } catch {} };
-    recognition.onerror = () => setStatus("麦克风被阻止，请选择按钮模式");
-    mic.current = recognition; try { recognition.start(); } catch {}
   }
   function start() {
     if (!studyWords.length) { setStatus("请先确认文本，或从学习清单选择词汇"); return; }
@@ -124,20 +114,12 @@ export default function Home() {
     const currentIndex = index < parsed.length ? index : 0;
     setWords(parsed); list.current = parsed; setIndex(currentIndex); position.current = currentIndex;
     active.current = true; setRunning(true);
-    setStatus(advance === "voice" ? "正在等待“OK”" : "点击下一个单词");
-    speak(parsed[currentIndex]); if (advance === "voice") listen();
-  }
-  function chooseAdvance(value: "voice" | "button") {
-    setAdvance(value); advanceMode.current = value;
-    if (running) {
-      mic.current?.stop(); mic.current = null;
-      setStatus(value === "voice" ? "正在等待“OK”" : "点击下一个单词");
-      if (value === "voice") window.setTimeout(listen, 100);
-    }
+    setStatus("正在准备法语发音");
+    speak(parsed[currentIndex]);
   }
   function reset() { stop("准备就绪"); setIndex(0); position.current = 0; setMeaning(studyWords[0]?.meaning_zh ?? ""); setDetails(studyWords[0]?.details_zh ?? ""); setSaveStatus(""); }
 
-  useEffect(() => () => { speechSynthesis.cancel(); mic.current?.stop(); }, []);
+  useEffect(() => { speechSynthesis.getVoices(); return () => { speechSynthesis.cancel(); if (speechTimer.current !== null) window.clearTimeout(speechTimer.current); }; }, []);
   const currentWord = words[index] ?? "—";
 
   useEffect(() => {
@@ -229,8 +211,7 @@ export default function Home() {
         <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
         <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
       </section> : <VocabExplorer onQueued={loadQueue} />}
-      <div className="options">
-        <fieldset><legend>切换到下一个词</legend><div><button className={advance === "voice" ? "selected" : ""} onClick={() => chooseAdvance("voice")}><b>语音</b><small>说“OK”</small></button><button className={advance === "button" ? "selected" : ""} onClick={() => chooseAdvance("button")}><b>按钮</b><small>点击继续</small></button></div></fieldset>
+      <div className="options playback-only">
         <fieldset><legend>播放方式</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>播放一次</b><small>仅播放一遍</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>重复播放</b><small>每 3 秒一次</small></button></div></fieldset>
       </div>
       <section className="player">

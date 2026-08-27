@@ -6,6 +6,7 @@ import StudyQueue, { QueueWord } from "./components/StudyQueue";
 
 type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; learned_at: string };
 const sample = "Je t’aime.";
+const frenchLevels = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 const wordTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];
 const splitWords = (value: string): string[] => Array.from(value.match(/[\p{L}\p{M}'’-]+/gu) ?? []);
 const defaultStudyWords: QueueWord[] = [
@@ -15,6 +16,7 @@ const defaultStudyWords: QueueWord[] = [
 
 export default function Home() {
   const [text, setText] = useState(sample);
+  const [targetLevel, setTargetLevel] = useState("B2");
   const [words, setWords] = useState(splitWords(sample));
   const [index, setIndex] = useState(0);
   const [running, setRunning] = useState(false);
@@ -145,7 +147,7 @@ export default function Home() {
     if (!parsed.length) { setTextStatus("请输入法语文本"); return; }
     setTextStatus("正在生成全部词性和释义…"); stop("正在准备词汇");
     try {
-      const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: parsed }) });
+      const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: parsed, targetLevel }) });
       if (!response.ok) throw new Error();
       const generated = await response.json();
       const byWord = new Map<string, QueueWord>(generated.items.map((item: { word: string; wordType: string; meaning: string }, itemIndex: number) => [item.word.toLocaleLowerCase("fr"), { id: -(itemIndex + 1), word: item.word, word_type_zh: item.wordType, meaning_zh: item.meaning, details_zh: "来自已确认文本", source_word: "文本学习", created_at: "" }]));
@@ -207,10 +209,11 @@ export default function Home() {
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div></header>
     <section className="card">
       <nav className="primary-switch"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button></nav>
+      <section className="level-selector"><div><label htmlFor="target-level">目标法语等级</label><p>AI 将优先采用适合该等级考试的词汇、搭配和释义。</p></div><select id="target-level" value={targetLevel} onChange={(event) => setTargetLevel(event.target.value)}>{frenchLevels.map((level) => <option key={level} value={level}>{level}</option>)}</select></section>
       {mode === "text" ? <section className="text-preparation"><label htmlFor="text">法语文本</label>
         <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
         <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
-      </section> : <VocabExplorer onQueued={loadQueue} />}
+      </section> : <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} />}
       <div className="options playback-only">
         <fieldset><legend>播放方式</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>播放一次</b><small>仅播放一遍</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>重复播放</b><small>每 3 秒一次</small></button></div></fieldset>
       </div>

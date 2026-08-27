@@ -71,6 +71,10 @@
 .primary-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 20px; padding: 5px; border-radius: 9px; background: #f1efe8; }
 .primary-switch button { padding: 11px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; }
 .primary-switch button.active { background: white; color: var(--green); box-shadow: 0 2px 10px #17211f10; }
+.level-selector { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: -5px 0 20px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 8px; background: #fbfaf6; }
+.level-selector label { color: var(--green); font-size: 13px; }
+.level-selector p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+.level-selector select { min-width: 90px; height: 40px; padding: 0 12px; border: 1px solid var(--green); border-radius: 7px; background: white; color: var(--green); font-size: 14px; font-weight: 700; cursor: pointer; }
 .text-preparation { margin-bottom: 20px; }
 .confirm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .confirm-row span { color: var(--muted); font-size: 10px; }
@@ -78,4 +82,6 @@
 .confirm-row button:disabled { opacity: .6; cursor: wait; }
 .text-status { min-height: 15px; margin: 7px 0 0; color: var(--green); font-size: 10px; text-align: right; }
 .primary-switch + .vocab-explorer { margin-top: 0; margin-bottom: 20px; }
+.level-selector + .vocab-explorer { margin-top: 0; margin-bottom: 20px; }
+@media (max-width: 520px) { .level-selector { align-items: flex-start; } }
 .options.playback-only { grid-template-columns: 1fr; }

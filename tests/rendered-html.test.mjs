@@ -52,6 +52,22 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /speechSynthesis\.getVoices\(\)\.find/);
   assert.match(page, /speechSynthesis\.resume\(\)/);
   assert.match(page, /下一个单词 →/);
+  assert.match(page, /目标法语等级/);
+  assert.match(page, /frenchLevels = \["A1", "A2", "B1", "B2", "C1", "C2"\]/);
+  assert.match(page, /JSON\.stringify\(\{ words: parsed, targetLevel \}\)/);
+});
+
+test("uses the selected CEFR level in both AI features", async () => {
+  const [page, explorer, analyzeText, explore] = await Promise.all([
+    read("../app/page.tsx"), read("../app/components/VocabExplorer.tsx"),
+    read("../app/api/analyze-text/route.ts"), read("../app/api/explore/route.ts"),
+  ]);
+  assert.match(page, /targetLevel=\{targetLevel\}/);
+  assert.match(explorer, /JSON\.stringify\(\{ word: word\.trim\(\), targetLevel \}\)/);
+  assert.match(analyzeText, /CEFR \$\{targetLevel\} French exam/);
+  assert.match(explore, /CEFR \$\{targetLevel\} French exam/);
+  assert.match(analyzeText, /allowedLevels\.has\(body\.targetLevel\)/);
+  assert.match(explore, /allowedLevels\.has\(body\.targetLevel\)/);
 });
 
 test("prevents duplicates within and across persistent lists", async () => {

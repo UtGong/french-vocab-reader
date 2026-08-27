@@ -12,6 +12,8 @@ A focused French pronunciation practice app. Paste a French paragraph, listen to
   - **Once:** pronounce the current word one time
   - **Repeat:** pronounce it again every three seconds
 - Pause, reset, word count, and progress tracking
+- Persistent learned-word library backed by Neon Postgres
+- Chinese part-of-speech and meaning fields for every saved word
 - Responsive interface for desktop and mobile
 - Graceful fallback to manual controls when speech recognition is unavailable
 
@@ -55,17 +57,20 @@ npm run build
 
 ## Privacy
 
-The app has no database and does not save the entered text. Speech synthesis happens through the browser. Voice recognition behavior and processing depend on the browser implementation.
+The entered paragraph is not saved. Only words explicitly saved through the learned-word form are stored in the connected database. Speech synthesis happens through the browser. Voice recognition behavior and processing depend on the browser implementation.
 
 ## Technology
 
 - Next.js App Router
 - React 19
 - TypeScript
+- Neon Serverless Postgres
 
 ## Deploying to Vercel
 
 Import this GitHub repository in Vercel and keep the framework preset set to **Next.js**. The standard build command is `npm run build`; no output-directory override is required.
+
+Connect a Neon database through Vercel Marketplace so that the project receives a `DATABASE_URL` environment variable. The app creates its `learned_words` table automatically on first use.
 
 ## License
 

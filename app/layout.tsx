@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./playback.css";
 import "./brand.css";
+import "./learned.css";
 
 export const metadata: Metadata = {
   title: "For Taxol — French vocabulary reader",

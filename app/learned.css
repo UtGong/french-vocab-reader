@@ -1,0 +1,6 @@
+.save-panel .save-status { grid-column: 2 / -1; }
+.save-panel input[readonly] { background: #f7f6f2; color: #292822; cursor: default; }
+.learned-list table input, .learned-list table select { width: 100%; min-width: 8rem; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: .55rem .6rem; font: inherit; color: inherit; }
+.learned-list table input:hover, .learned-list table select:hover, .learned-list table input:focus, .learned-list table select:focus { border-color: #d7d2c6; background: #fff; outline: none; }
+.learned-list table td:first-child input { font-weight: 650; }
+@media (max-width: 700px) { .save-panel .save-status { grid-column: 1; } .learned-list table input, .learned-list table select { min-width: 6.5rem; } }

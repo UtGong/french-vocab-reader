@@ -27,6 +27,7 @@ export default function Home() {
   const [meaning, setMeaning] = useState("");
   const [learned, setLearned] = useState<LearnedWord[]>([]);
   const [saveStatus, setSaveStatus] = useState("");
+  const editTimers = useRef<Record<number, number>>({});
 
   const mic = useRef<Recognition | null>(null);
   const active = useRef(false), position = useRef(0), list = useRef(words);
@@ -99,22 +100,58 @@ export default function Home() {
   }
   function reset() { stop("Ready"); setIndex(0); position.current = 0; setMeaning(""); setSaveStatus(""); }
 
-  async function saveWord() {
-    const word = words[index];
-    if (!word || !meaning.trim()) { setSaveStatus("请输入中文释义"); return; }
-    setSaveStatus("保存中…");
-    try {
-      const response = await fetch("/api/words", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word, wordType, meaning: meaning.trim() }),
-      });
-      if (!response.ok) throw new Error();
-      setSaveStatus("已保存"); await loadLearned();
-    } catch { setSaveStatus("数据库尚未连接"); }
-  }
-
   useEffect(() => () => { speechSynthesis.cancel(); mic.current?.stop(); }, []);
   const currentWord = words[index] ?? "—";
+
+  useEffect(() => {
+    if (!currentWord || currentWord === "—") return;
+    const controller = new AbortController();
+    setWordType(""); setMeaning(""); setSaveStatus("正在生成词性和释义…");
+    fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word: currentWord }), signal: controller.signal,
+    }).then(async (response) => {
+      if (!response.ok) throw new Error();
+      const result = await response.json();
+      setWordType(result.wordType); setMeaning(result.meaning); setSaveStatus("即将自动保存…");
+    }).catch((error) => { if (error.name !== "AbortError") setSaveStatus("无法自动生成，请稍后重试"); });
+    return () => controller.abort();
+  }, [currentWord]);
+
+  useEffect(() => {
+    if (!currentWord || currentWord === "—" || !wordType || !meaning.trim()) return;
+    const timer = window.setTimeout(async () => {
+      setSaveStatus("自动保存中…");
+      try {
+        const response = await fetch("/api/words", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word: currentWord, wordType, meaning: meaning.trim() }),
+        });
+        if (!response.ok) throw new Error();
+        setSaveStatus("已自动保存"); await loadLearned();
+      } catch { setSaveStatus("自动保存失败"); }
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [currentWord, wordType, meaning, loadLearned]);
+
+  function editLearned(id: number, field: "word" | "word_type_zh" | "meaning_zh", value: string) {
+    const current = learned.find((item) => item.id === id);
+    if (!current) return;
+    const changed = { ...current, [field]: value };
+    setLearned((items) => items.map((item) => item.id === id ? changed : item));
+    window.clearTimeout(editTimers.current[id]);
+    editTimers.current[id] = window.setTimeout(async () => {
+      setSaveStatus("保存修改中…");
+      try {
+        const response = await fetch("/api/words", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, word: changed.word, wordType: changed.word_type_zh, meaning: changed.meaning_zh }),
+        });
+        if (!response.ok) throw new Error();
+        setSaveStatus("修改已保存");
+      } catch { setSaveStatus("修改保存失败"); }
+    }, 700);
+  }
 
   return <main>
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div></header>
@@ -132,14 +169,14 @@ export default function Home() {
         <div className="actions">{running ? <button className="start" onClick={() => stop()}>Pause</button> : <button className="start" onClick={start}>Start</button>}<button className="next" onClick={next}>Next word →</button><button className="reset" onClick={reset}>Reset</button></div>
       </section>
       <section className="save-panel">
-        <div><p className="panel-kicker">Save learned word</p><h3>{currentWord}</h3></div>
-        <label>词性<select value={wordType} onChange={(event) => setWordType(event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-        <label>中文释义<input value={meaning} onChange={(event) => setMeaning(event.target.value)} placeholder="例如：你好" /></label>
-        <button onClick={saveWord}>保存单词</button><span className="save-status">{saveStatus}</span>
+        <div><p className="panel-kicker">自动保存</p><h3>{currentWord}</h3></div>
+        <label>词性<input value={wordType} readOnly placeholder="自动生成" /></label>
+        <label>中文释义<input value={meaning} readOnly placeholder="自动生成" /></label>
+        <span className="save-status">{saveStatus}</span>
       </section>
       <section className="learned-list">
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span></div>
-        {learned.length === 0 ? <p className="empty">保存的单词会显示在这里。</p> : <div className="table-wrap"><table><thead><tr><th>法语</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td>{item.word}</td><td><span>{item.word_type_zh}</span></td><td>{item.meaning_zh}</td></tr>)}</tbody></table></div>}
+        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap"><table><thead><tr><th>法语</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{learned.map((item) => <tr key={item.id}><td><input value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><select value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td></tr>)}</tbody></table></div>}
       </section>
     </section>
     <footer>Uses your browser’s French voice.</footer>

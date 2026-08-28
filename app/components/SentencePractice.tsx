@@ -38,7 +38,14 @@ export default function SentencePractice({ targetLevel, onUpdated }: { targetLev
     setLoading(true); setError(""); setSaveStatus(""); setShowChinese(false);
     try {
       const response = await fetch("/api/generate-sentence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetLevel, genre, format, requiredWords: selectedNext.map((item) => item.word) }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.error); setResult(data); setSelectedNext([]); setSelectionMode(false);
+      const data: Result & { error?: string } = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setResult(data);
+      setSelectedNext((items) => {
+        const present = new Set([...data.usedWords, ...data.newWords].map((item) => normalize(item.word)));
+        return items.filter((item) => present.has(normalize(item.word)));
+      });
+      setSelectionMode(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "生成失败"); } finally { setLoading(false); }
   }
   function toggleNext(word: Vocabulary) { setSelectedNext((items) => items.some((item) => normalize(item.word) === normalize(word.word)) ? items.filter((item) => normalize(item.word) !== normalize(word.word)) : [...items, word]); }

@@ -191,6 +191,8 @@ test("uses FLELex to constrain CEFR suggestions and generates annotated vocabula
   assert.match(practice, />一个句子</);
   assert.match(practice, /下次优先使用/);
   assert.match(practice, /选择词汇/);
+  assert.match(practice, /return items\.filter\(\(item\) => present\.has/);
+  assert.doesNotMatch(practice, /setSelectedNext\(\[\]\); setSelectionMode/);
   assert.match(sentence, /no more than TWO unique words/);
   assert.match(practice, /item\.forms/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);

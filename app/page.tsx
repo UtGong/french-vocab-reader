@@ -230,12 +230,6 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
         <div className="study-sides"><div className="french-side"><small>Français</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
         <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
-      <section className="save-panel">
-        <div><p className="panel-kicker">学习进度</p><h3>{currentWord}</h3></div>
-        <label>词性<input value={wordType} readOnly placeholder="自动生成" /></label>
-        <label>中文释义<input value={meaning} readOnly placeholder="自动生成" /></label>
-        <span className="save-status">{saveStatus}</span>
-      </section>
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span>{learned.length > 0 && <div className="list-bulk-actions"><button onClick={() => setSelectedLearned(selectedLearned.length === learned.length ? [] : learned.map((item) => item.id))}>{selectedLearned.length === learned.length ? "取消全选" : "全选"}</button><button className="danger-link" disabled={!selectedLearned.length} onClick={deleteSelectedLearned}>删除已选（{selectedLearned.length}）</button></div>}</div>

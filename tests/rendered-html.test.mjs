@@ -31,6 +31,7 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /className="study-sides"/);
   assert.match(page, /className="french-side"/);
   assert.match(page, /className="chinese-side"/);
+  assert.doesNotMatch(page, /className="save-panel"/);
   assert.match(page, /async function completeCurrentWord/);
   assert.match(page, /fetch\("\/api\/words"/);
   assert.match(page, /fetch\(`\/api\/queue\?id=/);

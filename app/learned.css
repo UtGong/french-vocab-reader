@@ -1,9 +1,7 @@
-.save-panel .save-status { grid-column: 2 / -1; }
-.save-panel input[readonly] { background: #f8f5fb; color: #302b39; cursor: default; }
 .learned-list table input, .learned-list table select { width: 100%; min-width: 8rem; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: .55rem .6rem; font: inherit; color: inherit; }
 .learned-list table input:hover, .learned-list table select:hover, .learned-list table input:focus, .learned-list table select:focus { border-color: #d8d0e2; background: #fff; outline: none; }
 .learned-list table td:first-child input { font-weight: 650; }
-@media (max-width: 700px) { .save-panel .save-status { grid-column: 1; } .learned-list table input, .learned-list table select { min-width: 6.5rem; } }
+@media (max-width: 700px) { .learned-list table input, .learned-list table select { min-width: 6.5rem; } }
 .vocab-explorer { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fc; }
 .explorer-heading { display: flex; align-items: center; justify-content: space-between; }
 .explorer-heading h3 { margin: 0; font: 700 18px Georgia, serif; }

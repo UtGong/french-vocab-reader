@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import VocabExplorer from "./components/VocabExplorer";
 import StudyQueue, { QueueWord } from "./components/StudyQueue";
 import AuthGate from "./components/AuthGate";
+import StudyTimer from "./components/StudyTimer";
 
 type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 const sample = "Je t’aime.";
@@ -223,6 +224,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       <div className="options playback-only">
         <fieldset><legend>播放方式</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>播放一次</b><small>仅播放一遍</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>重复播放</b><small>每 3 秒一次</small></button></div></fieldset>
       </div>
+      <StudyTimer />
       <section className="player">
         <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
         <div className="study-sides"><div className="french-side"><small>Français</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>

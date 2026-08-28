@@ -122,3 +122,18 @@
 .auth-error { margin: 0; color: #a23b2a; font-size: 10px; }
 .auth-switch { display: block; margin: 14px auto 0; border: 0; background: transparent; }
 @media (max-width: 560px) { .account-menu small { display: none; } }
+.study-timers { margin-bottom: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fc; }
+.timer-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+.timer-heading h3 { margin: 0; font: 700 14px Georgia, serif; }
+.timer-heading > span { color: var(--green); font-size: 9px; font-weight: 700; }
+.timer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.timer-grid article { padding: 13px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.timer-label { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }
+.timer-label b { font-size: 11px; }
+.timer-label small, .timer-label label { color: var(--muted); font-size: 9px; }
+.timer-label input { width: 48px; height: 27px; margin-left: 6px; border: 1px solid var(--line); border-radius: 5px; text-align: center; }
+.timer-grid strong { display: block; margin: 10px 0 12px; color: var(--green); font: 700 27px/1 Georgia, serif; letter-spacing: 2px; }
+.timer-grid article > div:last-child { display: flex; gap: 6px; }
+.timer-grid button { flex: 1; padding: 7px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 9px; font-weight: 700; cursor: pointer; }
+.timer-grid button:first-child { border-color: var(--green); background: var(--soft); }
+@media (max-width: 560px) { .timer-grid { grid-template-columns: 1fr; } }

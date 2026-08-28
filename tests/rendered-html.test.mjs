@@ -121,3 +121,13 @@ test("authenticates users and scopes vocabulary data by account", async () => {
   assert.match(queueRoute, /user_id = \$\{user\.id\}/);
   assert.match(page, /<AuthGate>/);
 });
+
+test("provides an accurate countdown timer and stopwatch", async () => {
+  const [page, timer] = await Promise.all([read("../app/page.tsx"), read("../app/components/StudyTimer.tsx")]);
+  assert.match(page, /<StudyTimer \/>/);
+  assert.match(timer, /倒计时/);
+  assert.match(timer, /秒表/);
+  assert.match(timer, /timerEnd\.current - Date\.now\(\)/);
+  assert.match(timer, /stopwatchBase\.current/);
+  assert.match(timer, /signalFinished/);
+});

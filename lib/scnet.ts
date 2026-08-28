@@ -1,4 +1,4 @@
-const MODEL = process.env.SCNET_MODEL || "DeepSeek-V4-Flash";
+const MODEL = process.env.SCNET_MODEL || "Qwen3.8-Max";
 const BASE_URL = "https://api.scnet.cn/api/llm/v1";
 
 export async function askLanguageModel(prompt: string, maxTokens = 1200) {

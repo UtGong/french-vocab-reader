@@ -104,7 +104,7 @@ test("preserves grouping context when words move between lists", async () => {
 
 test("uses the configured SCNet model without exposed credentials", async () => {
   const helper = await read("../lib/scnet.ts");
-  assert.match(helper, /DeepSeek-V4-Flash/);
+  assert.match(helper, /Qwen3\.8-Max/);
   assert.match(helper, /process\.env\.SCNET_API_KEY/);
   assert.match(helper, /api\.scnet\.cn\/api\/llm\/v1/);
   assert.match(helper, /process\.env\.SCNET_MODEL/);

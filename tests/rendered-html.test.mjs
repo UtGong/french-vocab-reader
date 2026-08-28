@@ -179,6 +179,9 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(dictionary, /fetch\("\/api\/analyze"/);
   assert.match(dictionary, /startsWith\("fr"\)/);
   assert.match(dictionary, /speechSynthesis\.speak/);
+  assert.match(dictionary, /activeUtterance/);
+  assert.match(dictionary, /window\.setTimeout/);
+  assert.doesNotMatch(dictionary, /speechSynthesis\.resume\(\)/);
   assert.match(dictionary, /utterance\.lang = "fr-FR"/);
   assert.match(dictionary, /加入学习清单/);
   assert.match(dictionary, /标为已学/);

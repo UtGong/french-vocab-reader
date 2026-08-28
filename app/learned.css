@@ -70,9 +70,9 @@
 .vocab-group th span { margin-right: 8px; padding: 3px 7px; border-radius: 10px; background: var(--green); color: white; font-size: 8px; letter-spacing: .4px; }
 .vocab-group th b { font-size: 12px; }
 .vocab-group th em { margin-left: 8px; color: var(--muted); font-size: 9px; font-style: normal; font-weight: 400; }
-.vocab-group th > div { display: flex; align-items: center; gap: 7px; }
-.vocab-group th button { margin-left: auto; padding: 5px 8px; border: 1px solid #d7cee4; border-radius: 5px; background: white; color: var(--green); font-size: 8px; font-weight: 700; cursor: pointer; }
-.vocab-group th button + button { margin-left: 0; }
+.vocab-group th > div { display: flex; align-items: center; justify-content: flex-start; gap: 7px; width: max-content; min-width: min(720px, 100%); }
+.vocab-group th button { padding: 5px 8px; border: 1px solid #d7cee4; border-radius: 5px; background: white; color: var(--green); font-size: 8px; font-weight: 700; cursor: pointer; }
+.vocab-group th em + button { margin-left: 10px; }
 .type-badge { display: inline-block; padding: 3px 7px; border-radius: 10px; background: var(--soft); color: var(--green); font-size: 9px; white-space: nowrap; }
 .detail-cell { max-width: 260px; color: #575061; font-size: 11px; }
 .date-cell { color: var(--muted); font-size: 9px; white-space: nowrap; }

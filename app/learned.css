@@ -19,7 +19,10 @@
 .word-summary p { margin: 0; text-align: right; font-size: 13px; }
 .explorer-result h5 { margin: 20px 0 4px; font-size: 13px; }
 .fold-section { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.fold-heading { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 0; background: #f7f3fa; color: var(--ink); cursor: pointer; text-align: left; }
+.fold-heading { width: 100%; display: flex; align-items: stretch; background: #f7f3fa; color: var(--ink); }
+.fold-heading > button { border: 0; background: transparent; color: inherit; cursor: pointer; }
+.fold-heading > button:first-child { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; text-align: left; }
+.fold-heading .section-select { margin: 7px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 9px; font-weight: 700; }
 .fold-heading span { display: flex; align-items: center; gap: 8px; }
 .fold-heading b { font-size: 12px; }
 .fold-heading small { color: var(--muted); font-size: 9px; font-weight: 400; }
@@ -136,6 +139,26 @@
 .timer-grid button:first-child { border-color: var(--green); background: var(--soft); }
 @media (max-width: 560px) { .timer-grid { grid-template-columns: 1fr; } }
 .primary-switch.three-tabs { grid-template-columns: repeat(3, 1fr); }
+.primary-switch.four-tabs { grid-template-columns: repeat(4, 1fr); }
+.settings-panel { margin: -7px 0 20px; border: 1px solid var(--line); border-radius: 8px; background: #faf8fc; }
+.settings-panel summary { display: flex; align-items: center; gap: 9px; padding: 10px 13px; color: var(--green); cursor: pointer; list-style-position: inside; }
+.settings-panel summary b { font-size: 11px; }
+.settings-panel summary span { color: var(--muted); font-size: 9px; font-weight: 400; }
+.settings-content { padding: 0 12px 12px; }
+.settings-content .level-selector { margin: 0 0 10px; }
+.settings-content .options { margin-bottom: 10px; }
+.settings-content .study-timers { margin-bottom: 0; }
+.dictionary { margin-bottom: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fc; }
+.dictionary form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 16px; }
+.dictionary form input { min-width: 0; height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; font-size: 14px; }
+.dictionary form button { padding: 0 18px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 700; cursor: pointer; }
+.dictionary article { display: grid; grid-template-columns: auto minmax(130px, .7fr) 1fr; align-items: center; gap: 16px; margin-top: 14px; padding: 17px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.dictionary-play { width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--green); color: white; cursor: pointer; }
+.dictionary h4 { margin: 0 0 5px; font: 500 24px Arial, sans-serif; }
+.dictionary article span, .dictionary article small { color: var(--muted); font-size: 10px; }
+.dictionary article b { display: inline-block; padding: 3px 8px; border-radius: 10px; background: var(--soft); color: var(--green); font-size: 9px; }
+.dictionary article p { margin: 7px 0 3px; font-size: 14px; }
+@media (max-width: 560px) { .primary-switch.four-tabs { grid-template-columns: 1fr 1fr; } .dictionary form, .dictionary article { grid-template-columns: 1fr; } }
 .french-side h2 { font-family: Arial, "Helvetica Neue", sans-serif; font-style: normal; font-weight: 400; letter-spacing: -.03em; }
 .french-side small { text-transform: none; font-size: 12px; letter-spacing: .4px; }
 .text-preview { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #faf8fc; }

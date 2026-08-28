@@ -17,6 +17,8 @@ test("connects AI results to the persistent study queue", async () => {
   assert.match(explorer, /全部收起/);
   assert.match(explorer, /全部展开/);
   assert.match(explorer, /className="fold-heading"/);
+  assert.match(explorer, /全选本组/);
+  assert.match(explorer, /toggleSectionSelection/);
   assert.match(explorer, /aria-expanded/);
   assert.match(queueRoute, /export async function GET/);
   assert.match(queueRoute, /export async function POST/);
@@ -159,6 +161,18 @@ test("uses FLELex to constrain CEFR suggestions and generates learned-word sente
   assert.match(lexicon, /flelex-beacco\.json/);
   assert.match(explore, /isAtOrBelowTarget/);
   assert.match(sentence, /ORDER BY RANDOM\(\) LIMIT 5/);
+  assert.match(sentence, /Maximize reuse of these learned words/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
   assert.match(page, /currentPhonetic/);
+});
+
+test("keeps secondary controls in settings and provides a simple dictionary", async () => {
+  const [page, dictionary] = await Promise.all([read("../app/page.tsx"), read("../app/components/Dictionary.tsx")]);
+  assert.match(page, /<details className="settings-panel">/);
+  assert.doesNotMatch(page, /<details className="settings-panel" open/);
+  assert.match(page, /<Dictionary \/>/);
+  assert.match(page, />法语词典</);
+  assert.match(dictionary, /fetch\("\/api\/analyze"/);
+  assert.match(dictionary, /startsWith\("fr"\)/);
+  assert.match(dictionary, /speechSynthesis\.speak/);
 });

@@ -7,6 +7,7 @@ import AuthGate from "./components/AuthGate";
 import StudyTimer from "./components/StudyTimer";
 import SentencePractice from "./components/SentencePractice";
 import Dictionary from "./components/Dictionary";
+import MilestoneCelebration from "./components/MilestoneCelebration";
 
 type LearnedWord = { id: number; word: string; phonetic: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 const sample = "Je t’aime.";
@@ -41,6 +42,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const [selectedPreview, setSelectedPreview] = useState<number[]>([]);
   const [previewOpen, setPreviewOpen] = useState(true);
   const [collapsedLearnedGroups, setCollapsedLearnedGroups] = useState<string[]>([]);
+  const [celebration, setCelebration] = useState<number | null>(null);
   const learnedGroups = useMemo(() => {
     const grouped = new Map<string, LearnedWord[]>();
     learned.forEach((item) => { const name = groupLearnedBy === "date" ? new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric" }).format(new Date(item.learned_at)) : item.source_word || "独立词汇"; grouped.set(name, [...(grouped.get(name) ?? []), item]); });
@@ -70,6 +72,15 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     } catch { /* Database may not be configured during local development. */ }
   }, []);
   useEffect(() => { loadLearned(); }, [loadLearned]);
+  useEffect(() => {
+    const milestone = Math.floor(learned.length / 25) * 25 || null;
+    if (!milestone) return;
+    const storageKey = `french-vocab-milestones:${email}`;
+    let celebrated: number[] = [];
+    try { celebrated = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { localStorage.removeItem(storageKey); }
+    if (celebrated.includes(milestone)) return;
+    localStorage.setItem(storageKey, JSON.stringify([...celebrated, milestone])); setCelebration(milestone);
+  }, [learned.length, email]);
   const loadQueue = useCallback(async () => {
     try { const response = await fetch("/api/queue"); if (response.ok) { const items = await response.json(); setQueue(items); return items as QueueWord[]; } } catch {}
     return [] as QueueWord[];
@@ -287,6 +298,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const currentPhonetic = studyWords[index]?.phonetic || "音标待补充";
 
   return <main>
+    <MilestoneCelebration milestone={celebration} onClose={() => setCelebration(null)} />
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div><div className="account-menu"><small>{email}</small><button onClick={logout}>退出登录</button></div></header>
     <section className="card">
       <nav className="primary-switch four-tabs"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button><button className={mode === "dictionary" ? "active" : ""} onClick={() => setMode("dictionary")}>法语词典</button><button className={mode === "sentence" ? "active" : ""} onClick={() => setMode("sentence")}>随机造句</button></nav>

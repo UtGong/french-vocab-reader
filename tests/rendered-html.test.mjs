@@ -205,3 +205,18 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(page, /function deleteSelectedPreview\(\)/);
   assert.match(page, /id: -\(occurrenceIndex \+ 1\)/);
 });
+
+test("celebrates learned vocabulary milestones once per user", async () => {
+  const [page, celebration, css] = await Promise.all([read("../app/page.tsx"), read("../app/components/MilestoneCelebration.tsx"), read("../app/learned.css")]);
+  assert.match(page, /Math\.floor\(learned\.length \/ 25\) \* 25/);
+  assert.match(page, /french-vocab-milestones:\$\{email\}/);
+  assert.match(page, /localStorage\.setItem/);
+  assert.match(page, /<MilestoneCelebration/);
+  assert.match(celebration, /Félicitations/);
+  assert.match(celebration, /6000/);
+  assert.match(celebration, /milestone % 100 === 0/);
+  assert.match(celebration, /pieces = grand \? 56 : 28/);
+  assert.match(css, /milestone-celebration\.grand/);
+  assert.match(css, /@keyframes confetti-fall/);
+  assert.match(css, /prefers-reduced-motion/);
+});

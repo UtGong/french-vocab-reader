@@ -170,9 +170,16 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   const [page, dictionary] = await Promise.all([read("../app/page.tsx"), read("../app/components/Dictionary.tsx")]);
   assert.match(page, /<details className="settings-panel">/);
   assert.doesNotMatch(page, /<details className="settings-panel" open/);
-  assert.match(page, /<Dictionary \/>/);
+  assert.match(page, /<Dictionary onUpdated=/);
   assert.match(page, />法语词典</);
   assert.match(dictionary, /fetch\("\/api\/analyze"/);
   assert.match(dictionary, /startsWith\("fr"\)/);
   assert.match(dictionary, /speechSynthesis\.speak/);
+  assert.match(dictionary, /utterance\.lang = "fr-FR"/);
+  assert.match(dictionary, /加入学习清单/);
+  assert.match(dictionary, /标为已学/);
+  assert.match(dictionary, /fetch\(destination === "queue" \? "\/api\/queue" : "\/api\/words"/);
+  assert.match(page, /全选本组/);
+  assert.match(page, /toggleLearnedGroup/);
+  assert.match(page, /previewOpen/);
 });

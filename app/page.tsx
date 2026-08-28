@@ -130,6 +130,16 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     if (nextIndex >= list.current.length) { stop("学习完成 — très bien !"); return; }
     position.current = nextIndex; setIndex(nextIndex); speak(list.current[nextIndex]);
   }
+  function previous() {
+    if (position.current <= 0) return;
+    const wasRunning = active.current;
+    speechSynthesis.cancel();
+    if (speechTimer.current !== null) window.clearTimeout(speechTimer.current);
+    speechTimer.current = null;
+    const previousIndex = position.current - 1;
+    position.current = previousIndex; setIndex(previousIndex);
+    if (wasRunning) speak(list.current[previousIndex]); else setStatus("已返回上一个单词");
+  }
   function start() {
     if (!studyWords.length) { setStatus("请先确认文本，或从待学习选择词汇"); return; }
     const parsed = studyWords.map((item) => item.word);
@@ -285,7 +295,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       <section className="player" ref={playerRef}>
         <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
         <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
-        <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
+        <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="previous" onClick={previous} disabled={index <= 0}>← 上一个单词</button><button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">

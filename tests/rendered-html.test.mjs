@@ -64,6 +64,9 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /startsWith\("fr"\)/);
   assert.match(page, /speechSynthesis\.resume\(\)/);
   assert.match(page, /下一个单词 →/);
+  assert.match(page, /← 上一个单词/);
+  assert.match(page, /function previous\(\)/);
+  assert.match(page, /disabled=\{index <= 0\}/);
   assert.match(page, /目标法语等级/);
   assert.match(page, /frenchLevels = \["A1", "A2", "B1", "B2", "C1", "C2"\]/);
   assert.match(page, /JSON\.stringify\(\{ words: batch, targetLevel \}\)/);

@@ -190,7 +190,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     const parsed = splitWords(text);
     if (!parsed.length) { setTextStatus("请输入法语文本"); return; }
     const uniqueWords = Array.from(new Map(parsed.map((word) => [word.toLocaleLowerCase("fr"), word])).values());
-    const batches = Array.from({ length: Math.ceil(uniqueWords.length / 18) }, (_, index) => uniqueWords.slice(index * 18, index * 18 + 18));
+    const batches = Array.from({ length: Math.ceil(uniqueWords.length / 8) }, (_, index) => uniqueWords.slice(index * 8, index * 8 + 8));
     setTextStatus(`正在分析 ${uniqueWords.length} 个不同词汇…`); stop("正在准备词汇");
     try {
       const analyzeBatch = async (batch: string[], attempt = 0): Promise<Array<{ word: string; phonetic: string; wordType: string; meaning: string; details?: string }>> => {

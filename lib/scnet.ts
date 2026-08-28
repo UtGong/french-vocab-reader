@@ -19,7 +19,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
         { role: "user", content: prompt },
       ],
     }),
-    signal: AbortSignal.timeout(25000),
+    signal: AbortSignal.timeout(50000),
   });
   if (!response.ok) throw new Error(`SCNet returned ${response.status}: ${await response.text()}`);
   const payload = await response.json();

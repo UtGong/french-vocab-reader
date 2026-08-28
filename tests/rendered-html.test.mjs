@@ -108,6 +108,7 @@ test("uses the configured SCNet model without exposed credentials", async () => 
   assert.match(helper, /process\.env\.SCNET_API_KEY/);
   assert.match(helper, /api\.scnet\.cn\/api\/llm\/v1/);
   assert.match(helper, /process\.env\.SCNET_MODEL/);
+  assert.match(helper, /AbortSignal\.timeout\(50000\)/);
   assert.doesNotMatch(helper, /hf_[A-Za-z0-9]+/);
 });
 
@@ -160,10 +161,11 @@ test("previews analyzed text with IPA before learning", async () => {
   assert.doesNotMatch(page.slice(page.indexOf("async function prepareText"), page.indexOf("async function deleteQueueWord")), /beginStudy\(prepared\)/);
   assert.match(analyze, /French IPA enclosed in \/slashes\//);
   assert.match(page, /uniqueWords/);
-  assert.match(page, /uniqueWords\.length \/ 18/);
+  assert.match(page, /uniqueWords\.length \/ 8/);
   assert.match(page, /index \+= 2/);
   assert.match(page, /attempt < 1/);
   assert.match(analyze, /slice\(0, 24\)/);
+  assert.match(analyze, /maxDuration = 60/);
   assert.match(analyze, /"isFrench":true/);
   assert.match(analyze, /grises has lemma gris/);
   assert.match(analyze, /原形（来自/);

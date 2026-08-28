@@ -6,7 +6,7 @@ const allowedTypes = ["名词", "动词", "代词", "形容词", "副词", "介�
 const allowedLevels = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
 const clean = (value: unknown, limit = 500) => typeof value === "string" ? value.trim().slice(0, limit) : "";
 type AnalyzedItem = { word: string; isFrench: boolean; phonetic: string; wordType: string; meaning: string; lemma: string; lemmaPhonetic: string; lemmaWordType: string; lemmaMeaning: string };
-export const maxDuration = 40;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {

@@ -29,8 +29,32 @@ export async function ensureWordsTable() {
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS source_word TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES app_users(id) ON DELETE CASCADE`;
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS phonetic TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS knowledge_analyzed_at TIMESTAMPTZ`;
   await sql`ALTER TABLE learned_words DROP CONSTRAINT IF EXISTS learned_words_word_key`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS learned_words_user_word_unique ON learned_words (user_id, LOWER(word)) WHERE user_id IS NOT NULL`;
+  return sql;
+}
+
+export async function ensureKnowledgeGraphTables() {
+  const sql = await ensureWordsTable();
+  await sql`CREATE TABLE IF NOT EXISTS vocabulary_groups (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    group_type TEXT NOT NULL,
+    description_zh TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS vocabulary_groups_user_name_type_unique ON vocabulary_groups (user_id, LOWER(name), group_type)`;
+  await sql`CREATE TABLE IF NOT EXISTS vocabulary_group_members (
+    group_id BIGINT NOT NULL REFERENCES vocabulary_groups(id) ON DELETE CASCADE,
+    word_id BIGINT NOT NULL REFERENCES learned_words(id) ON DELETE CASCADE,
+    relation_zh TEXT NOT NULL DEFAULT '',
+    confidence NUMERIC(4,3) NOT NULL DEFAULT 0.8,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (group_id, word_id)
+  )`;
   return sql;
 }
 

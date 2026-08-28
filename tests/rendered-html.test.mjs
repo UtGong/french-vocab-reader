@@ -231,3 +231,32 @@ test("celebrates learned vocabulary milestones once per user", async () => {
   assert.match(css, /@keyframes confetti-fall/);
   assert.match(css, /prefers-reduced-motion/);
 });
+
+test("builds an editable multi-group vocabulary knowledge graph every five new words", async () => {
+  const [database, service, route, component, wordsRoute, page, css] = await Promise.all([
+    read("../lib/db.ts"), read("../lib/knowledge-graph.ts"), read("../app/api/knowledge-graph/route.ts"),
+    read("../app/components/KnowledgeGraph.tsx"), read("../app/api/words/route.ts"), read("../app/page.tsx"), read("../app/learned.css"),
+  ]);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS vocabulary_groups/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS vocabulary_group_members/);
+  assert.match(database, /knowledge_analyzed_at/);
+  assert.match(service, /pending\.length < 5/);
+  assert.match(service, /Put every input word in 2-4 genuinely useful groups/);
+  assert.match(service, /Do not group by source, learning date/);
+  assert.match(wordsRoute, /after\(async \(\) =>/);
+  assert.match(wordsRoute, /refreshKnowledgeGraph\(user\.id\)/);
+  assert.match(route, /body\.action === "refresh"/);
+  assert.match(route, /body\.action === "addMember"/);
+  assert.match(route, /export async function PATCH/);
+  assert.match(route, /export async function DELETE/);
+  assert.match(component, /分组列表/);
+  assert.match(component, /关系图/);
+  assert.match(component, /学习时间/);
+  assert.match(component, /全选本组/);
+  assert.match(component, /复习本组/);
+  assert.match(component, /编辑分组/);
+  assert.match(page, />词汇图谱</);
+  assert.match(page, /<KnowledgeGraph learned=\{learned\}/);
+  assert.match(css, /\.graph-canvas/);
+  assert.match(css, /\.knowledge-group-card/);
+});

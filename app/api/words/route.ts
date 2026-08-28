@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { refreshKnowledgeGraph } from "@/lib/knowledge-graph";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
 
 export async function GET() {
@@ -37,6 +39,7 @@ export async function POST(request: Request) {
       ? await sql`UPDATE learned_words SET word = ${word}, phonetic = ${phonetic}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord} WHERE id = ${existing[0].id} AND user_id = ${user.id} RETURNING id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
       : await sql`INSERT INTO learned_words (user_id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${word}, ${phonetic}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     await sql`DELETE FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word})`;
+    if (!existing.length) after(async () => { try { await refreshKnowledgeGraph(user.id); } catch (error) { console.error("Unable to refresh knowledge graph in background", error); } });
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error("Unable to save learned word", error);

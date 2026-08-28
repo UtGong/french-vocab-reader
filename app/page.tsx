@@ -8,6 +8,7 @@ import StudyTimer from "./components/StudyTimer";
 import SentencePractice from "./components/SentencePractice";
 import Dictionary from "./components/Dictionary";
 import MilestoneCelebration from "./components/MilestoneCelebration";
+import KnowledgeGraph from "./components/KnowledgeGraph";
 
 type LearnedWord = { id: number; word: string; phonetic: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 const sample = "Je t’aime.";
@@ -34,7 +35,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const [details, setDetails] = useState("第一人称单数主语代词");
   const [queue, setQueue] = useState<QueueWord[]>([]);
   const [studyWords, setStudyWords] = useState<QueueWord[]>(defaultStudyWords);
-  const [mode, setMode] = useState<"text" | "explore" | "dictionary" | "sentence">("text");
+  const [mode, setMode] = useState<"text" | "explore" | "dictionary" | "sentence" | "knowledge">("text");
   const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
   const [groupLearnedBy, setGroupLearnedBy] = useState<"source" | "date">("source");
@@ -301,7 +302,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     <MilestoneCelebration milestone={celebration} onClose={() => setCelebration(null)} />
     <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div><div className="account-menu"><small>{email}</small><button onClick={logout}>退出登录</button></div></header>
     <section className="card">
-      <nav className="primary-switch four-tabs"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button><button className={mode === "dictionary" ? "active" : ""} onClick={() => setMode("dictionary")}>法语词典</button><button className={mode === "sentence" ? "active" : ""} onClick={() => setMode("sentence")}>随机造句</button></nav>
+      <nav className="primary-switch five-tabs"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button><button className={mode === "dictionary" ? "active" : ""} onClick={() => setMode("dictionary")}>法语词典</button><button className={mode === "sentence" ? "active" : ""} onClick={() => setMode("sentence")}>随机造句</button><button className={mode === "knowledge" ? "active" : ""} onClick={() => setMode("knowledge")}>词汇图谱</button></nav>
       <details className="settings-panel"><summary><b>设置</b><span>等级与播放</span></summary><div className="settings-content">
         <section className="level-selector"><div><label htmlFor="target-level">目标法语等级</label><p>AI 将优先采用适合该等级考试的词汇、搭配和释义。</p></div><select id="target-level" value={targetLevel} onChange={(event) => setTargetLevel(event.target.value)}>{frenchLevels.map((level) => <option key={level} value={level}>{level}</option>)}</select></section>
         <div className="options playback-only"><fieldset><legend>播放方式</legend><div><button className={playback === "once" ? "selected" : ""} onClick={() => { setPlayback("once"); playMode.current = "once"; }}><b>播放一次</b><small>仅播放一遍</small></button><button className={playback === "repeat" ? "selected" : ""} onClick={() => { setPlayback("repeat"); playMode.current = "repeat"; }}><b>重复播放</b><small>每 3 秒一次</small></button></div></fieldset></div>
@@ -310,13 +311,15 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
         <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextPreview([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
         <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
         {textPreview.length > 0 && <div className="text-preview"><div className="preview-actions"><b>生成结果</b><button onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "收起" : "展开"}</button><button onClick={() => setSelectedPreview(selectedPreview.length === textPreview.length ? [] : textPreview.map((item) => item.id))}>{selectedPreview.length === textPreview.length ? "取消全选" : "全选"}</button><button className="preview-delete" disabled={!selectedPreview.length} onClick={deleteSelectedPreview}>删除已选（{selectedPreview.length}）</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("queue")}>加入待学习（{selectedPreview.length}）</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("learned")}>标为已学（{selectedPreview.length}）</button><button className="preview-start" disabled={!selectedPreview.length} onClick={() => beginStudy(textPreview.filter((item) => selectedPreview.includes(item.id)))}>学习已选词汇（{selectedPreview.length}）</button></div>{previewOpen && <div className="table-wrap"><table><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{textPreview.map((item) => <tr key={item.id}><td><input type="checkbox" aria-label={`选择 ${item.word}`} checked={selectedPreview.includes(item.id)} onChange={() => setSelectedPreview((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.word_type_zh}</td><td>{item.meaning_zh}</td></tr>)}</tbody></table></div>}</div>}
-      </section> : mode === "explore" ? <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} /> : mode === "dictionary" ? <Dictionary onUpdated={() => { loadQueue(); loadLearned(); }} /> : <SentencePractice targetLevel={targetLevel} />}
+      </section> : mode === "explore" ? <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} /> : mode === "dictionary" ? <Dictionary onUpdated={() => { loadQueue(); loadLearned(); }} /> : mode === "sentence" ? <SentencePractice targetLevel={targetLevel} /> : <KnowledgeGraph learned={learned} onReview={(items) => beginStudy(items, "review")} />}
+      {mode !== "knowledge" && <>
       <StudyTimer />
       <section className="player" ref={playerRef}>
         <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
         <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
         <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="previous" onClick={previous} disabled={index <= 0}>← 上一个单词</button><button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
+      </>}
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span><div className="group-method"><button className={groupLearnedBy === "source" ? "active" : ""} onClick={() => setGroupLearnedBy("source")}>按词汇组</button><button className={groupLearnedBy === "date" ? "active" : ""} onClick={() => setGroupLearnedBy("date")}>按首次学习日期</button></div>{learned.length > 0 && <div className="list-bulk-actions"><button onClick={() => setSelectedLearned(selectedLearned.length === learned.length ? [] : learned.map((item) => item.id))}>{selectedLearned.length === learned.length ? "取消全选" : "全选"}</button><button className="review-selected" disabled={!selectedLearned.length} onClick={reviewSelectedLearned}>复习已选（{selectedLearned.length}）</button><button className="danger-link" disabled={!selectedLearned.length} onClick={deleteSelectedLearned}>删除已选（{selectedLearned.length}）</button></div>}</div>

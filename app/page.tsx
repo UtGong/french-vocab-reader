@@ -131,7 +131,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     position.current = nextIndex; setIndex(nextIndex); speak(list.current[nextIndex]);
   }
   function start() {
-    if (!studyWords.length) { setStatus("请先确认文本，或从学习清单选择词汇"); return; }
+    if (!studyWords.length) { setStatus("请先确认文本，或从待学习选择词汇"); return; }
     const parsed = studyWords.map((item) => item.word);
     if (!parsed.length) { setStatus("请先输入法语文本"); return; }
     const currentIndex = index < parsed.length ? index : 0;
@@ -168,21 +168,48 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   async function prepareText() {
     const parsed = splitWords(text);
     if (!parsed.length) { setTextStatus("请输入法语文本"); return; }
-    setTextStatus("正在生成全部词性和释义…"); stop("正在准备词汇");
+    const uniqueWords = Array.from(new Map(parsed.map((word) => [word.toLocaleLowerCase("fr"), word])).values());
+    const batches = Array.from({ length: Math.ceil(uniqueWords.length / 18) }, (_, index) => uniqueWords.slice(index * 18, index * 18 + 18));
+    setTextStatus(`正在分析 ${uniqueWords.length} 个不同词汇…`); stop("正在准备词汇");
     try {
-      const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: parsed, targetLevel }) });
-      if (!response.ok) throw new Error();
-      const generated = await response.json();
-      const byWord = new Map<string, QueueWord>(generated.items.map((item: { word: string; phonetic: string; wordType: string; meaning: string }, itemIndex: number) => [item.word.toLocaleLowerCase("fr"), { id: -(itemIndex + 1), word: item.word, phonetic: item.phonetic, word_type_zh: item.wordType, meaning_zh: item.meaning, details_zh: "来自已确认文本", source_word: "文本学习", created_at: "" }]));
+      const analyzeBatch = async (batch: string[], attempt = 0): Promise<Array<{ word: string; phonetic: string; wordType: string; meaning: string }>> => {
+        const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: batch, targetLevel }) });
+        if (!response.ok) { if (attempt < 1) return analyzeBatch(batch, attempt + 1); throw new Error(); }
+        const generated = await response.json();
+        if (!Array.isArray(generated.items) || generated.items.length !== batch.length) { if (attempt < 1) return analyzeBatch(batch, attempt + 1); throw new Error(); }
+        return generated.items;
+      };
+      const analyzed: Array<{ word: string; phonetic: string; wordType: string; meaning: string }> = [];
+      for (let index = 0; index < batches.length; index += 2) {
+        setTextStatus(`正在生成词义：第 ${index + 1}–${Math.min(index + 2, batches.length)} / ${batches.length} 批…`);
+        const results = await Promise.all(batches.slice(index, index + 2).map((batch) => analyzeBatch(batch)));
+        analyzed.push(...results.flat());
+      }
+      const byWord = new Map<string, QueueWord>(analyzed.map((item, itemIndex) => [item.word.toLocaleLowerCase("fr"), { id: -(itemIndex + 1), word: item.word, phonetic: item.phonetic, word_type_zh: item.wordType, meaning_zh: item.meaning, details_zh: "来自已确认文本", source_word: "文本学习", created_at: "" }]));
       const prepared = parsed.map((word) => byWord.get(word.toLocaleLowerCase("fr"))).filter((item: QueueWord | undefined): item is QueueWord => Boolean(item));
       if (prepared.length !== parsed.length) throw new Error();
       setTextPreview(prepared); setSelectedPreview(prepared.map((item) => item.id)); setTextStatus(`已生成 ${prepared.length} 个词汇，请确认后开始学习`);
-    } catch { setTextStatus("智能生成失败，请检查设置后重试"); }
+    } catch { setTextStatus("部分词汇生成失败，请重试；系统会自动分批处理长文本"); }
+  }
+
+  async function saveSelectedPreview(destination: "queue" | "learned") {
+    const chosen = textPreview.filter((item) => selectedPreview.includes(item.id));
+    if (!chosen.length) return;
+    setTextStatus(destination === "queue" ? "正在加入待学习…" : "正在标为已学…");
+    const payloads = chosen.map((item) => ({ word: item.word, phonetic: item.phonetic, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh, sourceWord: "文本学习" }));
+    try {
+      const responses = destination === "queue"
+        ? [await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: payloads }) })]
+        : await Promise.all(payloads.map((item) => fetch("/api/words", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) })));
+      if (responses.some((response) => !response.ok)) throw new Error();
+      await Promise.all([loadQueue(), loadLearned()]);
+      setTextStatus(destination === "queue" ? "已将所选词汇加入待学习" : "已将所选词汇标为已学");
+    } catch { setTextStatus("保存所选词汇失败，请重试"); }
   }
 
   async function deleteQueueWord(id: number) {
     if (!(await fetch(`/api/queue?id=${id}`, { method: "DELETE" })).ok) { setSaveStatus("删除失败"); return; }
-    setQueue((items) => items.filter((item) => item.id !== id)); setSaveStatus("已从学习清单删除");
+    setQueue((items) => items.filter((item) => item.id !== id)); setSaveStatus("已从待学习删除");
   }
 
   async function deleteLearnedWord(id: number) {
@@ -200,7 +227,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   async function moveBackToQueue(item: LearnedWord) {
     const response = await fetch("/api/queue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: [{ word: item.word, phonetic: item.phonetic, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh || "从已学单词移回", sourceWord: item.source_word || item.word }] }) });
     if (!response.ok) { setSaveStatus("移动失败"); return; }
-    await deleteLearnedWord(item.id); await loadQueue(); setSaveStatus("已移回学习清单");
+    await deleteLearnedWord(item.id); await loadQueue(); setSaveStatus("已移回待学习");
   }
 
   async function markQueueWordLearned(item: QueueWord) {
@@ -252,7 +279,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       {mode === "text" ? <section className="text-preparation"><label htmlFor="text">法语文本</label>
         <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextPreview([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
         <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
-        {textPreview.length > 0 && <div className="text-preview"><div className="preview-actions"><b>生成结果</b><button onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "收起" : "展开"}</button><button onClick={() => setSelectedPreview(selectedPreview.length === textPreview.length ? [] : textPreview.map((item) => item.id))}>{selectedPreview.length === textPreview.length ? "取消全选" : "全选"}</button><button className="preview-start" disabled={!selectedPreview.length} onClick={() => beginStudy(textPreview.filter((item) => selectedPreview.includes(item.id)))}>学习已选词汇（{selectedPreview.length}）</button></div>{previewOpen && <div className="table-wrap"><table><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{textPreview.map((item) => <tr key={item.id}><td><input type="checkbox" aria-label={`选择 ${item.word}`} checked={selectedPreview.includes(item.id)} onChange={() => setSelectedPreview((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.word_type_zh}</td><td>{item.meaning_zh}</td></tr>)}</tbody></table></div>}</div>}
+        {textPreview.length > 0 && <div className="text-preview"><div className="preview-actions"><b>生成结果</b><button onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "收起" : "展开"}</button><button onClick={() => setSelectedPreview(selectedPreview.length === textPreview.length ? [] : textPreview.map((item) => item.id))}>{selectedPreview.length === textPreview.length ? "取消全选" : "全选"}</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("queue")}>加入待学习（{selectedPreview.length}）</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("learned")}>标为已学（{selectedPreview.length}）</button><button className="preview-start" disabled={!selectedPreview.length} onClick={() => beginStudy(textPreview.filter((item) => selectedPreview.includes(item.id)))}>学习已选词汇（{selectedPreview.length}）</button></div>{previewOpen && <div className="table-wrap"><table><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{textPreview.map((item) => <tr key={item.id}><td><input type="checkbox" aria-label={`选择 ${item.word}`} checked={selectedPreview.includes(item.id)} onChange={() => setSelectedPreview((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.word_type_zh}</td><td>{item.meaning_zh}</td></tr>)}</tbody></table></div>}</div>}
       </section> : mode === "explore" ? <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} /> : mode === "dictionary" ? <Dictionary onUpdated={() => { loadQueue(); loadLearned(); }} /> : <SentencePractice targetLevel={targetLevel} />}
       <StudyTimer />
       <section className="player" ref={playerRef}>
@@ -263,7 +290,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       <StudyQueue items={queue} onStart={beginStudy} onDelete={deleteQueueWord} onLearned={markQueueWordLearned} />
       <section className="learned-list">
         <div className="list-title"><h3>已学单词</h3><span>{learned.length}</span><div className="group-method"><button className={groupLearnedBy === "source" ? "active" : ""} onClick={() => setGroupLearnedBy("source")}>按词汇组</button><button className={groupLearnedBy === "date" ? "active" : ""} onClick={() => setGroupLearnedBy("date")}>按首次学习日期</button></div>{learned.length > 0 && <div className="list-bulk-actions"><button onClick={() => setSelectedLearned(selectedLearned.length === learned.length ? [] : learned.map((item) => item.id))}>{selectedLearned.length === learned.length ? "取消全选" : "全选"}</button><button className="review-selected" disabled={!selectedLearned.length} onClick={reviewSelectedLearned}>复习已选（{selectedLearned.length}）</button><button className="danger-link" disabled={!selectedLearned.length} onClick={deleteSelectedLearned}>删除已选（{selectedLearned.length}）</button></div>}</div>
-        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap vocabulary-storage"><table className="learned-table"><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th><th>关系 / 用法</th><th>首次学习日期</th><th>操作</th></tr></thead><tbody>{learnedGroups.map(([group, groupItems]) => <Fragment key={group}><tr className="vocab-group"><th colSpan={8}><div><span>{groupLearnedBy === "date" ? "学习日期" : "词汇组"}</span><b>{group}</b><em>{groupItems.length} 个词</em><button onClick={() => toggleLearnedGroupSelection(groupItems)}>{groupItems.every((item) => selectedLearned.includes(item.id)) ? "取消本组" : "全选本组"}</button><button onClick={() => toggleLearnedGroup(group)}>{collapsedLearnedGroups.includes(group) ? "展开 +" : "收起 −"}</button></div></th></tr>{!collapsedLearnedGroups.includes(group) && groupItems.map((item) => <tr key={item.id}><td><input aria-label={`选择 ${item.word}`} type="checkbox" checked={selectedLearned.includes(item.id)} onChange={() => setSelectedLearned((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td><input aria-label="法语" value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><input aria-label="音标" value={item.phonetic || ""} placeholder="/fɔ.ne.tik/" onChange={(event) => editLearned(item.id, "phonetic", event.target.value)} /></td><td><select aria-label="词性" value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input aria-label="中文释义" value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><input aria-label="关系或用法" value={item.details_zh} placeholder="补充关系或用法" onChange={(event) => editLearned(item.id, "details_zh", event.target.value)} /></td><td className="date-cell">{new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" }).format(new Date(item.learned_at))}</td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回学习清单</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</Fragment>)}</tbody></table></div>}
+        {learned.length === 0 ? <p className="empty">学过的单词会自动显示在这里。</p> : <div className="table-wrap vocabulary-storage"><table className="learned-table"><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th><th>关系 / 用法</th><th>首次学习日期</th><th>操作</th></tr></thead><tbody>{learnedGroups.map(([group, groupItems]) => <Fragment key={group}><tr className="vocab-group"><th colSpan={8}><div><span>{groupLearnedBy === "date" ? "学习日期" : "词汇组"}</span><b>{group}</b><em>{groupItems.length} 个词</em><button onClick={() => toggleLearnedGroupSelection(groupItems)}>{groupItems.every((item) => selectedLearned.includes(item.id)) ? "取消本组" : "全选本组"}</button><button onClick={() => toggleLearnedGroup(group)}>{collapsedLearnedGroups.includes(group) ? "展开 +" : "收起 −"}</button></div></th></tr>{!collapsedLearnedGroups.includes(group) && groupItems.map((item) => <tr key={item.id}><td><input aria-label={`选择 ${item.word}`} type="checkbox" checked={selectedLearned.includes(item.id)} onChange={() => setSelectedLearned((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td><input aria-label="法语" value={item.word} onChange={(event) => editLearned(item.id, "word", event.target.value)} /></td><td><input aria-label="音标" value={item.phonetic || ""} placeholder="/fɔ.ne.tik/" onChange={(event) => editLearned(item.id, "phonetic", event.target.value)} /></td><td><select aria-label="词性" value={item.word_type_zh} onChange={(event) => editLearned(item.id, "word_type_zh", event.target.value)}>{wordTypes.map((type) => <option key={type}>{type}</option>)}</select></td><td><input aria-label="中文释义" value={item.meaning_zh} onChange={(event) => editLearned(item.id, "meaning_zh", event.target.value)} /></td><td><input aria-label="关系或用法" value={item.details_zh} placeholder="补充关系或用法" onChange={(event) => editLearned(item.id, "details_zh", event.target.value)} /></td><td className="date-cell">{new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "short", day: "numeric" }).format(new Date(item.learned_at))}</td><td><div className="row-actions"><button onClick={() => moveBackToQueue(item)}>移回待学习</button><button className="danger-link" onClick={() => deleteLearnedWord(item.id)}>删除</button></div></td></tr>)}</Fragment>)}</tbody></table></div>}
       </section>
     </section>
     <footer>Utilise la voix française de votre navigateur.</footer>

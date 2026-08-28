@@ -12,7 +12,7 @@ test("connects AI results to the persistent study queue", async () => {
   assert.match(explorer, /result\.relatedWords\.map/);
   assert.match(explorer, /result\.synonyms\.map/);
   assert.match(explorer, /result\.patternWords\.map/);
-  assert.match(explorer, /加入学习清单/);
+  assert.match(explorer, /加入待学习/);
   assert.match(explorer, /取消全选/);
   assert.match(explorer, /全部收起/);
   assert.match(explorer, /全部展开/);
@@ -28,7 +28,7 @@ test("connects AI results to the persistent study queue", async () => {
 
 test("supports selecting, studying, and completing queued words", async () => {
   const [page, queue] = await Promise.all([read("../app/page.tsx"), read("../app/components/StudyQueue.tsx")]);
-  assert.match(queue, /学习清单/);
+  assert.match(queue, /待学习/);
   assert.match(queue, /学习已选词汇/);
   assert.match(page, /className="study-sides"/);
   assert.match(page, /className="french-side"/);
@@ -47,9 +47,9 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /确认文本并生成词义/);
   assert.match(page, /fetch\("\/api\/analyze-text"/);
   assert.doesNotMatch(page, /fetch\("\/api\/analyze"/);
-  const prepareText = page.slice(page.indexOf("async function prepareText"), page.indexOf("async function deleteQueueWord"));
+  const prepareText = page.slice(page.indexOf("async function prepareText"), page.indexOf("async function saveSelectedPreview"));
   assert.doesNotMatch(prepareText, /fetch\("\/api\/queue"/);
-  assert.match(page, /移回学习清单/);
+  assert.match(page, /移回待学习/);
   assert.match(page, /deleteLearnedWord/);
   assert.match(page, /const sample = "Je t’aime\."/);
   assert.match(page, /word: "Je", phonetic: "\/ʒə\/", word_type_zh: "代词", meaning_zh: "我"/);
@@ -66,7 +66,7 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /下一个单词 →/);
   assert.match(page, /目标法语等级/);
   assert.match(page, /frenchLevels = \["A1", "A2", "B1", "B2", "C1", "C2"\]/);
-  assert.match(page, /JSON\.stringify\(\{ words: parsed, targetLevel \}\)/);
+  assert.match(page, /JSON\.stringify\(\{ words: batch, targetLevel \}\)/);
 });
 
 test("uses the selected CEFR level in both AI features", async () => {
@@ -155,6 +155,11 @@ test("previews analyzed text with IPA before learning", async () => {
   assert.match(page, /学习已选词汇/);
   assert.doesNotMatch(page.slice(page.indexOf("async function prepareText"), page.indexOf("async function deleteQueueWord")), /beginStudy\(prepared\)/);
   assert.match(analyze, /French IPA enclosed in \/slashes\//);
+  assert.match(page, /uniqueWords/);
+  assert.match(page, /uniqueWords\.length \/ 18/);
+  assert.match(page, /index \+= 2/);
+  assert.match(page, /attempt < 1/);
+  assert.match(analyze, /slice\(0, 24\)/);
 });
 
 test("uses FLELex to constrain CEFR suggestions and generates learned-word sentences", async () => {
@@ -183,10 +188,14 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(dictionary, /window\.setTimeout/);
   assert.doesNotMatch(dictionary, /speechSynthesis\.resume\(\)/);
   assert.match(dictionary, /utterance\.lang = "fr-FR"/);
-  assert.match(dictionary, /加入学习清单/);
+  assert.match(dictionary, /加入待学习/);
   assert.match(dictionary, /标为已学/);
   assert.match(dictionary, /fetch\(destination === "queue" \? "\/api\/queue" : "\/api\/words"/);
   assert.match(page, /全选本组/);
   assert.match(page, /toggleLearnedGroup/);
   assert.match(page, /previewOpen/);
+  assert.match(page, /saveSelectedPreview\("queue"\)/);
+  assert.match(page, /saveSelectedPreview\("learned"\)/);
+  assert.match(page, /加入待学习（\{selectedPreview\.length\}）/);
+  assert.match(page, /标为已学（\{selectedPreview\.length\}）/);
 });

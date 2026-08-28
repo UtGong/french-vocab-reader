@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (!(await getCurrentUser())) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const body = await request.json();
     const targetLevel = allowedLevels.has(body.targetLevel) ? body.targetLevel : "B2";
-    const words: string[] = Array.isArray(body.words) ? [...new Set<string>(body.words.map((word: unknown) => clean(word, 120)).filter((word: string) => Boolean(word)))].slice(0, 80) : [];
+    const words: string[] = Array.isArray(body.words) ? [...new Set<string>(body.words.map((word: unknown) => clean(word, 120)).filter((word: string) => Boolean(word)))].slice(0, 24) : [];
     if (!words.length) return NextResponse.json({ error: "No words provided" }, { status: 400 });
     const result = await askLanguageModel(`Analyze every item in this JSON array as modern French vocabulary for a learner preparing for the CEFR ${targetLevel} French exam: ${JSON.stringify(words)}.
 Return exactly {"items":[{"word":"exact input item","phonetic":"French IPA enclosed in /slashes/","wordType":"one of 名词,动词,代词,形容词,副词,介词,连词,冠词,数词,感叹词,短语,其他","meaning":"accurate concise Simplified Chinese meaning"}]}.

@@ -14,6 +14,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
       max_tokens: maxTokens,
       top_p: 0.8,
       stream: false,
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: "You are a careful French lexicographer and French-to-Simplified-Chinese teacher. Return only valid JSON. Never invent a word or an etymological relationship." },
         { role: "user", content: prompt },
@@ -25,7 +26,13 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
   const payload = await response.json();
   const content = payload.choices?.[0]?.message?.content;
   if (typeof content !== "string") throw new Error("SCNet response had no content");
-  const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("SCNet response was not JSON");
-  return JSON.parse(match[0]);
+  const normalized = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    const start = normalized.indexOf("{");
+    const end = normalized.lastIndexOf("}");
+    if (start < 0 || end <= start) throw new Error("SCNet response was not JSON");
+    return JSON.parse(normalized.slice(start, end + 1));
+  }
 }

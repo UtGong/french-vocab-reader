@@ -109,6 +109,8 @@ test("uses the configured SCNet model without exposed credentials", async () => 
   assert.match(helper, /api\.scnet\.cn\/api\/llm\/v1/);
   assert.match(helper, /process\.env\.SCNET_MODEL/);
   assert.match(helper, /AbortSignal\.timeout\(50000\)/);
+  assert.match(helper, /response_format: \{ type: "json_object" \}/);
+  assert.match(helper, /replace\(\/\^```\(\?:json\)\?/);
   assert.doesNotMatch(helper, /hf_[A-Za-z0-9]+/);
 });
 

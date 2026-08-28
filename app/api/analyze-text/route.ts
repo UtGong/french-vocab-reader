@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { askLanguageModel } from "@/lib/huggingface";
+import { getCurrentUser } from "@/lib/auth";
 
 const allowedTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];
 const allowedLevels = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
@@ -8,6 +9,7 @@ export const maxDuration = 40;
 
 export async function POST(request: Request) {
   try {
+    if (!(await getCurrentUser())) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const body = await request.json();
     const targetLevel = allowedLevels.has(body.targetLevel) ? body.targetLevel : "B2";
     const words: string[] = Array.isArray(body.words) ? [...new Set<string>(body.words.map((word: unknown) => clean(word, 120)).filter((word: string) => Boolean(word)))].slice(0, 80) : [];

@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VocabExplorer from "./components/VocabExplorer";
 import StudyQueue, { QueueWord } from "./components/StudyQueue";
+import AuthGate from "./components/AuthGate";
 
 type LearnedWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 const sample = "Je t’aime.";
@@ -14,7 +15,7 @@ const defaultStudyWords: QueueWord[] = [
   { id: -2, word: "t’aime", word_type_zh: "动词", meaning_zh: "爱你", details_zh: "te aime 的省音形式，来自动词 aimer", source_word: "默认文本", created_at: "" },
 ];
 
-export default function Home() {
+function VocabularyApp({ email, logout }: { email: string; logout: () => Promise<void> }) {
   const [text, setText] = useState(sample);
   const [targetLevel, setTargetLevel] = useState("B2");
   const [words, setWords] = useState(splitWords(sample));
@@ -211,7 +212,7 @@ export default function Home() {
   }
 
   return <main>
-    <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div></header>
+    <header><span>☾</span><div><h1>For Taxol</h1><p>The choice of moon</p></div><div className="account-menu"><small>{email}</small><button onClick={logout}>退出登录</button></div></header>
     <section className="card">
       <nav className="primary-switch"><button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>法语文本</button><button className={mode === "explore" ? "active" : ""} onClick={() => setMode("explore")}>词汇联想</button></nav>
       <section className="level-selector"><div><label htmlFor="target-level">目标法语等级</label><p>AI 将优先采用适合该等级考试的词汇、搭配和释义。</p></div><select id="target-level" value={targetLevel} onChange={(event) => setTargetLevel(event.target.value)}>{frenchLevels.map((level) => <option key={level} value={level}>{level}</option>)}</select></section>
@@ -241,4 +242,8 @@ export default function Home() {
     </section>
     <footer>Utilise la voix française de votre navigateur.</footer>
   </main>;
+}
+
+export default function Home() {
+  return <AuthGate>{(user, logout) => <VocabularyApp email={user.email} logout={logout} />}</AuthGate>;
 }

@@ -81,8 +81,8 @@ test("uses the selected CEFR level in both AI features", async () => {
 test("prevents duplicates within and across persistent lists", async () => {
   const [wordsRoute, queueRoute] = await Promise.all([read("../app/api/words/route.ts"), read("../app/api/queue/route.ts")]);
   assert.match(wordsRoute, /LOWER\(word\) = LOWER\(\$\{word\}\)/);
-  assert.match(wordsRoute, /DELETE FROM study_queue WHERE LOWER\(word\)/);
-  assert.match(queueRoute, /SELECT 1 FROM learned_words WHERE LOWER\(word\)/);
+  assert.match(wordsRoute, /DELETE FROM study_queue WHERE user_id = \$\{user\.id\} AND LOWER\(word\)/);
+  assert.match(queueRoute, /SELECT 1 FROM learned_words WHERE user_id = \$\{user\.id\} AND LOWER\(word\)/);
   assert.match(queueRoute, /DELETE FROM study_queue q USING learned_words l/);
   assert.match(queueRoute, /DELETE FROM study_queue a USING study_queue b/);
 });
@@ -101,4 +101,23 @@ test("uses the configured Hugging Face model without exposed credentials", async
   assert.match(helper, /process\.env\.HF_TOKEN/);
   assert.match(helper, /enable_thinking: false/);
   assert.doesNotMatch(helper, /hf_[A-Za-z0-9]+/);
+});
+
+test("authenticates users and scopes vocabulary data by account", async () => {
+  const [auth, authRoute, database, wordsRoute, queueRoute, page] = await Promise.all([
+    read("../lib/auth.ts"), read("../app/api/auth/route.ts"), read("../lib/db.ts"),
+    read("../app/api/words/route.ts"), read("../app/api/queue/route.ts"), read("../app/page.tsx"),
+  ]);
+  assert.match(auth, /httpOnly: true/);
+  assert.match(auth, /sameSite: "lax"/);
+  assert.match(auth, /scryptSync/);
+  assert.match(authRoute, /action === "register"/);
+  assert.match(authRoute, /action === "login"/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS app_users/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS user_sessions/);
+  assert.match(database, /learned_words_user_word_unique/);
+  assert.match(database, /study_queue_user_word_unique/);
+  assert.match(wordsRoute, /user_id = \$\{user\.id\}/);
+  assert.match(queueRoute, /user_id = \$\{user\.id\}/);
+  assert.match(page, /<AuthGate>/);
 });

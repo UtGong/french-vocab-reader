@@ -106,3 +106,19 @@
 .level-selector + .vocab-explorer { margin-top: 0; margin-bottom: 20px; }
 @media (max-width: 520px) { .level-selector { align-items: flex-start; } }
 .options.playback-only { grid-template-columns: 1fr; }
+.account-menu { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.account-menu small { color: var(--muted); font-size: 9px; }
+.account-menu button, .auth-switch { padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--green); font-size: 9px; font-weight: 700; cursor: pointer; }
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-card { width: min(420px, 100%); padding: 28px; border: 1px solid var(--line); border-radius: 14px; background: white; box-shadow: 0 18px 60px #27233112; }
+.auth-card header { margin-bottom: 28px; }
+.auth-copy h2 { margin: 5px 0 8px; font: 700 28px Georgia, serif; }
+.auth-copy > p:last-child { margin: 0 0 22px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.auth-card form { display: grid; gap: 14px; }
+.auth-card form label { display: grid; gap: 7px; }
+.auth-card form input { height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; font-size: 13px; outline: none; }
+.auth-card form input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--soft); }
+.auth-card form > button { height: 44px; border: 0; border-radius: 7px; background: var(--green); color: white; font-weight: 700; cursor: pointer; }
+.auth-error { margin: 0; color: #a23b2a; font-size: 10px; }
+.auth-switch { display: block; margin: 14px auto 0; border: 0; background: transparent; }
+@media (max-width: 560px) { .account-menu small { display: none; } }

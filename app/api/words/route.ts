@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const sql = await ensureWordsTable();
     await ensureStudyQueueTable();
-    await sql`DELETE FROM learned_words a USING learned_words b WHERE a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
-    const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at FROM learned_words ORDER BY learned_at DESC`;
+    await sql`DELETE FROM learned_words a USING learned_words b WHERE a.user_id = ${user.id} AND b.user_id = ${user.id} AND a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
+    const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at FROM learned_words WHERE user_id = ${user.id} ORDER BY learned_at DESC`;
     return NextResponse.json(rows);
   } catch (error) {
     console.error("Unable to load learned words", error);
@@ -19,6 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const body = await request.json();
     const word = typeof body.word === "string" ? body.word.trim() : "";
     const wordType = typeof body.wordType === "string" ? body.wordType.trim() : "";
@@ -29,11 +32,11 @@ export async function POST(request: Request) {
     }
     const sql = await ensureWordsTable();
     await ensureStudyQueueTable();
-    const existing = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) LIMIT 1`;
+    const existing = await sql`SELECT id FROM learned_words WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word}) LIMIT 1`;
     const rows = existing.length
-      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW() WHERE id = ${existing[0].id} RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
-      : await sql`INSERT INTO learned_words (word, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
-    await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
+      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW() WHERE id = ${existing[0].id} AND user_id = ${user.id} RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
+      : await sql`INSERT INTO learned_words (user_id, word, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
+    await sql`DELETE FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
     console.error("Unable to save learned word", error);
@@ -43,6 +46,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const body = await request.json();
     const id = Number(body.id);
     const word = typeof body.word === "string" ? body.word.trim() : "";
@@ -54,14 +58,14 @@ export async function PATCH(request: Request) {
     }
     const sql = await ensureWordsTable();
     await ensureStudyQueueTable();
-    const duplicate = await sql`SELECT id FROM learned_words WHERE LOWER(word) = LOWER(${word}) AND id <> ${id} LIMIT 1`;
+    const duplicate = await sql`SELECT id FROM learned_words WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word}) AND id <> ${id} LIMIT 1`;
     if (duplicate.length) return NextResponse.json({ error: "Duplicate word" }, { status: 409 });
     const rows = await sql`UPDATE learned_words
       SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW()
-      WHERE id = ${id}
+      WHERE id = ${id} AND user_id = ${user.id}
       RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     if (!rows[0]) return NextResponse.json({ error: "Word not found" }, { status: 404 });
-    await sql`DELETE FROM study_queue WHERE LOWER(word) = LOWER(${word})`;
+    await sql`DELETE FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error("Unable to update learned word", error);
@@ -71,10 +75,11 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const user = await getCurrentUser(); if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const id = Number(new URL(request.url).searchParams.get("id"));
     if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     const sql = await ensureWordsTable();
-    await sql`DELETE FROM learned_words WHERE id = ${id}`;
+    await sql`DELETE FROM learned_words WHERE id = ${id} AND user_id = ${user.id}`;
     return NextResponse.json({ deleted: true });
   } catch (error) {
     console.error("Unable to delete learned word", error);

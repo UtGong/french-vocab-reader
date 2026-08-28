@@ -185,6 +185,8 @@
 .preview-actions b { margin-right: auto; font-size: 12px; }
 .preview-actions button { padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--green); font-size: 9px; font-weight: 700; cursor: pointer; }
 .preview-actions .preview-start { border-color: var(--green); background: var(--green); color: white; }
+.preview-actions .preview-delete { border-color: #e5c2bb; color: #a33d2d; }
+.preview-actions button:disabled { opacity: .45; cursor: default; }
 .text-preview td:nth-child(2) { font: 600 14px Arial, sans-serif; }
 .group-method { display: flex; gap: 4px; margin-left: 10px; }
 .group-method button { padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--muted); font-size: 8px; cursor: pointer; }

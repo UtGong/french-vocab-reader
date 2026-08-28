@@ -201,4 +201,7 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(page, /saveSelectedPreview\("learned"\)/);
   assert.match(page, /加入待学习（\{selectedPreview\.length\}）/);
   assert.match(page, /标为已学（\{selectedPreview\.length\}）/);
+  assert.match(page, /删除已选（\{selectedPreview\.length\}）/);
+  assert.match(page, /function deleteSelectedPreview\(\)/);
+  assert.match(page, /id: -\(occurrenceIndex \+ 1\)/);
 });

@@ -233,6 +233,22 @@
 .knowledge-toolbar { margin-bottom: 12px; padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: #faf8fc; }
 .knowledge-toolbar > span { margin-left: auto; color: var(--muted); font-size: 9px; }
 .knowledge-toolbar button:disabled { opacity: .5; cursor: wait; }
+.lead-word-picker { position: relative; width: min(280px, 42vw); }
+.knowledge-toolbar .lead-picker-trigger { width: 100%; display: grid; grid-template-columns: 1fr auto; padding: 7px 9px; text-align: left; }
+.lead-picker-trigger b, .lead-picker-trigger small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-picker-trigger b { font-size: 10px; }
+.lead-picker-trigger small { grid-column: 1; margin-top: 2px; color: var(--muted); font-size: 8px; font-weight: 400; }
+.lead-picker-trigger > span { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+.lead-picker-panel { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: min(390px, 80vw); padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: 0 16px 45px #37264d30; }
+.lead-picker-panel > input { width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; outline: none; }
+.lead-picker-panel > input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--soft); }
+.lead-picker-panel > div { max-height: 310px; margin-top: 7px; overflow-y: auto; }
+.knowledge-toolbar .lead-picker-panel button { width: 100%; display: grid; grid-template-columns: minmax(80px, .7fr) auto 1fr; align-items: center; gap: 8px; padding: 9px; border: 0; border-radius: 5px; color: var(--ink); text-align: left; }
+.knowledge-toolbar .lead-picker-panel button:hover, .knowledge-toolbar .lead-picker-panel button.selected { background: var(--soft); }
+.lead-picker-panel button b { font: 600 12px Arial, sans-serif; }
+.lead-picker-panel button span { color: var(--green); font-size: 8px; }
+.lead-picker-panel button small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.lead-picker-panel > p { margin: 12px; color: var(--muted); font-size: 9px; text-align: center; }
 .knowledge-status { margin: 6px 0 12px; color: var(--green); font-size: 10px; }
 .core-word-view { display: grid; gap: 10px; }
 .core-word-lead { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 14px; border: 2px solid var(--green); border-radius: 10px; background: var(--soft); }
@@ -261,6 +277,16 @@
 .date-word-cloud > button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); text-align: left; cursor: pointer; }
 .date-word-cloud > button.selected { border-color: var(--green); background: var(--soft); }
 .date-word-cloud small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+.date-word-list { margin: 0 14px 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: white; }
+.date-word-head, .date-word-list label { display: grid; grid-template-columns: 48px minmax(90px, .8fr) minmax(85px, .7fr) minmax(70px, .6fr) minmax(150px, 1.5fr); align-items: center; gap: 8px; padding: 9px 11px; }
+.date-word-head { background: #f5f1f8; color: var(--muted); font-size: 8px; font-weight: 700; }
+.date-word-list label { border-top: 1px solid var(--line); cursor: pointer; }
+.date-word-list label.selected { background: var(--soft); }
+.date-word-list input { accent-color: var(--green); }
+.date-word-list b { font: 600 13px Arial, sans-serif; }
+.date-word-list label > span { color: var(--muted); font-size: 9px; }
+.date-word-list label > em { color: var(--green); font-size: 9px; font-style: normal; }
+.date-word-list label > p { margin: 0; font-size: 10px; }
 .graph-layout { display: grid; grid-template-columns: 150px 1fr; gap: 10px; min-height: 470px; }
 .graph-layout aside { display: flex; flex-direction: column; gap: 6px; max-height: 470px; overflow-y: auto; }
 .graph-layout aside button { padding: 9px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); text-align: left; cursor: pointer; }
@@ -292,4 +318,4 @@
 .knowledge-editor > div > div:last-child { display: flex; justify-content: flex-end; gap: 7px; }
 .knowledge-editor button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--green); font-weight: 700; cursor: pointer; }
 .knowledge-editor button.primary { border-color: var(--green); background: var(--green); color: white; }
-@media (max-width: 700px) { .primary-switch.five-tabs { grid-template-columns: repeat(2, 1fr); } .knowledge-heading, .knowledge-toolbar { align-items: flex-start; flex-wrap: wrap; } .knowledge-toolbar > span { width: 100%; margin-left: 0; } .knowledge-members { grid-template-columns: 1fr; } .core-word-lead { grid-template-columns: auto 1fr; } .core-word-lead button { grid-column: 1 / -1; grid-row: auto; } .graph-layout { grid-template-columns: 1fr; } .graph-layout aside { flex-direction: row; max-height: none; overflow-x: auto; } .graph-layout aside button { min-width: 120px; } .graph-canvas { min-height: 400px; } .graph-node { width: 78px; } }
+@media (max-width: 700px) { .primary-switch.five-tabs { grid-template-columns: repeat(2, 1fr); } .knowledge-heading, .knowledge-toolbar { align-items: flex-start; flex-wrap: wrap; } .knowledge-toolbar > span { width: 100%; margin-left: 0; } .lead-word-picker { width: 100%; } .lead-picker-panel { width: 100%; } .knowledge-members { grid-template-columns: 1fr; } .core-word-lead { grid-template-columns: auto 1fr; } .core-word-lead button { grid-column: 1 / -1; grid-row: auto; } .date-word-list { overflow-x: auto; } .date-word-head, .date-word-list label { min-width: 620px; } .graph-layout { grid-template-columns: 1fr; } .graph-layout aside { flex-direction: row; max-height: none; overflow-x: auto; } .graph-layout aside button { min-width: 120px; } .graph-canvas { min-height: 400px; } .graph-node { width: 78px; } }

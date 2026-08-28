@@ -255,10 +255,15 @@ test("builds an editable multi-group vocabulary knowledge graph every five new w
   assert.match(component, /学习时间/);
   assert.match(component, /核心词/);
   assert.match(component, /选择核心词/);
+  assert.match(component, /搜索核心词/);
+  assert.match(component, /leadChoices/);
+  assert.match(component, /lead-picker-panel/);
   assert.match(component, /相同开头 \$\{prefix\}-/);
   assert.match(component, /拼写相似不代表属于同一词族/);
   assert.match(component, /centeredSections/);
   assert.match(component, /core-graph/);
+  assert.match(component, /date-word-list/);
+  assert.match(component, /item\.phonetic \|\| "—"/);
   assert.match(component, /全选本组/);
   assert.match(component, /复习本组/);
   assert.match(component, /编辑分组/);

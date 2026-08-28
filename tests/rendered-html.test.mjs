@@ -241,6 +241,7 @@ test("builds an editable multi-group vocabulary knowledge graph every five new w
   assert.match(database, /CREATE TABLE IF NOT EXISTS vocabulary_group_members/);
   assert.match(database, /knowledge_analyzed_at/);
   assert.match(service, /pending\.length < 5/);
+  assert.match(service, /pending\.slice\(0, 8\)/);
   assert.match(service, /Put every input word in 2-4 genuinely useful groups/);
   assert.match(service, /Do not group by source, learning date/);
   assert.match(wordsRoute, /after\(async \(\) =>/);
@@ -252,6 +253,12 @@ test("builds an editable multi-group vocabulary knowledge graph every five new w
   assert.match(component, /分组列表/);
   assert.match(component, /关系图/);
   assert.match(component, /学习时间/);
+  assert.match(component, /核心词/);
+  assert.match(component, /选择核心词/);
+  assert.match(component, /相同开头 \$\{prefix\}-/);
+  assert.match(component, /拼写相似不代表属于同一词族/);
+  assert.match(component, /centeredSections/);
+  assert.match(component, /core-graph/);
   assert.match(component, /全选本组/);
   assert.match(component, /复习本组/);
   assert.match(component, /编辑分组/);

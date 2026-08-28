@@ -8,7 +8,8 @@ export async function refreshKnowledgeGraph(userId: number, force = false) {
   const sql = await ensureKnowledgeGraphTables();
   const pending = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh FROM learned_words WHERE user_id = ${userId} AND knowledge_analyzed_at IS NULL ORDER BY learned_at ASC`;
   if (!force && pending.length < 5) return { updated: 0, pending: pending.length };
-  const words = pending.slice(0, force ? 40 : 10);
+  // One model call per request keeps each Vercel invocation safely below 60 seconds.
+  const words = pending.slice(0, 8);
   if (!words.length) return { updated: 0, pending: 0 };
   let updated = 0;
 

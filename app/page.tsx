@@ -193,23 +193,23 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     const batches = Array.from({ length: Math.ceil(uniqueWords.length / 18) }, (_, index) => uniqueWords.slice(index * 18, index * 18 + 18));
     setTextStatus(`正在分析 ${uniqueWords.length} 个不同词汇…`); stop("正在准备词汇");
     try {
-      const analyzeBatch = async (batch: string[], attempt = 0): Promise<Array<{ word: string; phonetic: string; wordType: string; meaning: string }>> => {
+      const analyzeBatch = async (batch: string[], attempt = 0): Promise<Array<{ word: string; phonetic: string; wordType: string; meaning: string; details?: string }>> => {
         const response = await fetch("/api/analyze-text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words: batch, targetLevel }) });
         if (!response.ok) { if (attempt < 1) return analyzeBatch(batch, attempt + 1); throw new Error(); }
         const generated = await response.json();
-        if (!Array.isArray(generated.items) || generated.items.length !== batch.length) { if (attempt < 1) return analyzeBatch(batch, attempt + 1); throw new Error(); }
+        if (!Array.isArray(generated.items)) { if (attempt < 1) return analyzeBatch(batch, attempt + 1); throw new Error(); }
         return generated.items;
       };
-      const analyzed: Array<{ word: string; phonetic: string; wordType: string; meaning: string }> = [];
+      const analyzed: Array<{ word: string; phonetic: string; wordType: string; meaning: string; details?: string }> = [];
       for (let index = 0; index < batches.length; index += 2) {
         setTextStatus(`正在生成词义：第 ${index + 1}–${Math.min(index + 2, batches.length)} / ${batches.length} 批…`);
         const results = await Promise.all(batches.slice(index, index + 2).map((batch) => analyzeBatch(batch)));
         analyzed.push(...results.flat());
       }
-      const byWord = new Map<string, QueueWord>(analyzed.map((item, itemIndex) => [item.word.toLocaleLowerCase("fr"), { id: -(itemIndex + 1), word: item.word, phonetic: item.phonetic, word_type_zh: item.wordType, meaning_zh: item.meaning, details_zh: "来自已确认文本", source_word: "文本学习", created_at: "" }]));
-      const prepared = parsed.map((word, occurrenceIndex) => { const item = byWord.get(word.toLocaleLowerCase("fr")); return item ? { ...item, id: -(occurrenceIndex + 1), word } : undefined; }).filter((item: QueueWord | undefined): item is QueueWord => Boolean(item));
-      if (prepared.length !== parsed.length) throw new Error();
-      setTextPreview(prepared); setSelectedPreview(prepared.map((item) => item.id)); setTextStatus(`已生成 ${prepared.length} 个词汇，请确认后开始学习`);
+      const uniqueAnalyzed = Array.from(new Map(analyzed.map((item) => [item.word.toLocaleLowerCase("fr"), item])).values());
+      const prepared = uniqueAnalyzed.map<QueueWord>((item, itemIndex) => ({ id: -(itemIndex + 1), word: item.word, phonetic: item.phonetic, word_type_zh: item.wordType, meaning_zh: item.meaning, details_zh: item.details || "来自已确认文本", source_word: "文本学习", created_at: "" }));
+      if (!prepared.length) throw new Error();
+      setTextPreview(prepared); setSelectedPreview(prepared.map((item) => item.id)); setTextStatus(`已保留 ${prepared.length} 个法语词汇（含必要原形），请确认后开始学习`);
     } catch { setTextStatus("部分词汇生成失败，请重试；系统会自动分批处理长文本"); }
   }
 

@@ -164,6 +164,11 @@ test("previews analyzed text with IPA before learning", async () => {
   assert.match(page, /index \+= 2/);
   assert.match(page, /attempt < 1/);
   assert.match(analyze, /slice\(0, 24\)/);
+  assert.match(analyze, /"isFrench":true/);
+  assert.match(analyze, /grises has lemma gris/);
+  assert.match(analyze, /原形（来自/);
+  assert.match(page, /含必要原形/);
+  assert.doesNotMatch(page, /prepared\.length !== parsed\.length/);
 });
 
 test("uses FLELex to constrain CEFR suggestions and generates learned-word sentences", async () => {
@@ -204,7 +209,7 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(page, /标为已学（\{selectedPreview\.length\}）/);
   assert.match(page, /删除已选（\{selectedPreview\.length\}）/);
   assert.match(page, /function deleteSelectedPreview\(\)/);
-  assert.match(page, /id: -\(occurrenceIndex \+ 1\)/);
+  assert.match(page, /id: -\(itemIndex \+ 1\)/);
 });
 
 test("celebrates learned vocabulary milestones once per user", async () => {

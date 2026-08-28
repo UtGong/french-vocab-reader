@@ -134,6 +134,10 @@ test("provides an accurate countdown timer and stopwatch", async () => {
   assert.match(timer, /timerEnd\.current - Date\.now\(\)/);
   assert.match(timer, /stopwatchBase\.current/);
   assert.match(timer, /signalFinished/);
+  assert.match(timer, /className="timer-compact-bar"/);
+  assert.match(timer, /计时设置/);
+  assert.match(timer, /aria-expanded=\{expanded\}/);
+  assert.ok(page.indexOf("<StudyTimer />") < page.indexOf("className=\"player\""));
 });
 
 test("supports first-date grouping and review without changing learned dates", async () => {

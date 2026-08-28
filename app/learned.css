@@ -151,6 +151,18 @@
 .settings-content .level-selector { margin: 0 0 10px; }
 .settings-content .options { margin-bottom: 10px; }
 .settings-content .study-timers { margin-bottom: 0; }
+.study-timers.compact { position: sticky; top: 8px; z-index: 8; margin: 0 0 10px; padding: 8px 10px; border-color: #cfc3df; background: #f8f4fbf2; box-shadow: 0 8px 22px #4d3f6815; backdrop-filter: blur(10px); }
+.timer-compact-bar { display: flex; align-items: center; gap: 9px; }
+.timer-compact-bar > div { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.timer-compact-bar small { color: var(--muted); font-size: 8px; }
+.timer-compact-bar strong { color: var(--green); font: 700 16px/1 Arial, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: .4px; }
+.timer-compact-bar button, .timer-settings button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--green); font-size: 8px; font-weight: 700; cursor: pointer; }
+.timer-compact-bar .timer-expand { margin-left: auto; background: var(--soft); }
+.timer-settings { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.timer-settings label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; }
+.timer-settings input { width: 52px; height: 28px; border: 1px solid var(--line); border-radius: 5px; text-align: center; }
+.timer-settings span { margin-left: auto; color: var(--green); font-size: 8px; font-weight: 700; }
+@media (max-width: 560px) { .study-timers.compact { top: 4px; } .timer-compact-bar { flex-wrap: wrap; } .timer-compact-bar > div { flex: 1; } .timer-compact-bar .timer-expand { width: 100%; margin-left: 0; } .timer-settings { flex-wrap: wrap; } }
 .dictionary { margin-bottom: 20px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fc; }
 .dictionary form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 16px; }
 .dictionary form input { min-width: 0; height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; font-size: 14px; }

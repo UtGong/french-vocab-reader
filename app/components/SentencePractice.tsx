@@ -41,10 +41,6 @@ export default function SentencePractice({ targetLevel, onUpdated }: { targetLev
       const data: Result & { error?: string } = await response.json();
       if (!response.ok) throw new Error(data.error);
       setResult(data);
-      setSelectedNext((items) => {
-        const present = new Set([...data.usedWords, ...data.newWords].map((item) => normalize(item.word)));
-        return items.filter((item) => present.has(normalize(item.word)));
-      });
       setSelectionMode(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "生成失败"); } finally { setLoading(false); }
   }

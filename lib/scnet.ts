@@ -14,6 +14,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
       max_tokens: maxTokens,
       top_p: 0.8,
       stream: false,
+      enable_thinking: false,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: "You are a careful French lexicographer and French-to-Simplified-Chinese teacher. Return only valid JSON. Never invent a word or an etymological relationship." },

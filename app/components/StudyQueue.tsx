@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 
-export type QueueWord = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; created_at: string };
+export type QueueWord = { id: number; word: string; phonetic: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; created_at: string };
 
 export default function StudyQueue({ items, onStart, onDelete, onLearned }: { items: QueueWord[]; onStart: (items: QueueWord[]) => void; onDelete: (id: number) => void; onLearned: (item: QueueWord) => void }) {
   const [selected, setSelected] = useState<number[]>([]);

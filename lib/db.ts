@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 
-export type WordRow = { id: number; word: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
+export type WordRow = { id: number; word: string; phonetic: string; word_type_zh: string; meaning_zh: string; details_zh: string; source_word: string; learned_at: string };
 
 export function database() {
   const url = process.env.DATABASE_URL;
@@ -28,6 +28,7 @@ export async function ensureWordsTable() {
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS details_zh TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS source_word TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES app_users(id) ON DELETE CASCADE`;
+  await sql`ALTER TABLE learned_words ADD COLUMN IF NOT EXISTS phonetic TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE learned_words DROP CONSTRAINT IF EXISTS learned_words_word_key`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS learned_words_user_word_unique ON learned_words (user_id, LOWER(word)) WHERE user_id IS NOT NULL`;
   return sql;
@@ -45,6 +46,7 @@ export async function ensureStudyQueueTable() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
   await sql`ALTER TABLE study_queue ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES app_users(id) ON DELETE CASCADE`;
+  await sql`ALTER TABLE study_queue ADD COLUMN IF NOT EXISTS phonetic TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE study_queue DROP CONSTRAINT IF EXISTS study_queue_word_key`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS study_queue_user_word_unique ON study_queue (user_id, LOWER(word)) WHERE user_id IS NOT NULL`;
   return sql;

@@ -15,10 +15,10 @@ export async function POST(request: Request) {
     const words: string[] = Array.isArray(body.words) ? [...new Set<string>(body.words.map((word: unknown) => clean(word, 120)).filter((word: string) => Boolean(word)))].slice(0, 80) : [];
     if (!words.length) return NextResponse.json({ error: "No words provided" }, { status: 400 });
     const result = await askLanguageModel(`Analyze every item in this JSON array as modern French vocabulary for a learner preparing for the CEFR ${targetLevel} French exam: ${JSON.stringify(words)}.
-Return exactly {"items":[{"word":"exact input item","wordType":"one of 名词,动词,代词,形容词,副词,介词,连词,冠词,数词,感叹词,短语,其他","meaning":"accurate concise Simplified Chinese meaning"}]}.
+Return exactly {"items":[{"word":"exact input item","phonetic":"French IPA enclosed in /slashes/","wordType":"one of 名词,动词,代词,形容词,副词,介词,连词,冠词,数词,感叹词,短语,其他","meaning":"accurate concise Simplified Chinese meaning"}]}.
 Return one item per input, in the same order. Determine the part of speech from ordinary French usage. Choose the Chinese meaning and usage most relevant to a ${targetLevel} exam. For polysemous words, prioritize the sense a ${targetLevel} learner is most likely expected to understand. Never use ellipses, placeholders, empty meanings, or explanations outside JSON.`, Math.min(4000, words.length * 55 + 200));
     if (!Array.isArray(result.items)) throw new Error("Model returned no items");
-    const items = result.items.map((item: Record<string, unknown>) => ({ word: clean(item.word, 120), wordType: clean(item.wordType, 40), meaning: clean(item.meaning) }))
+    const items = result.items.map((item: Record<string, unknown>) => ({ word: clean(item.word, 120), phonetic: clean(item.phonetic, 120), wordType: clean(item.wordType, 40), meaning: clean(item.meaning) }))
       .filter((item: { word: string; wordType: string; meaning: string }) => item.word && allowedTypes.includes(item.wordType) && item.meaning && !/^\.{2,}$/.test(item.meaning));
     const returned = new Set(items.map((item: { word: string }) => item.word.toLocaleLowerCase("fr")));
     if (words.some((word) => !returned.has(word.toLocaleLowerCase("fr")))) throw new Error("Model returned incomplete analysis");

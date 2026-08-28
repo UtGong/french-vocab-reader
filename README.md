@@ -50,14 +50,14 @@ npm run build
 
 ## How it works
 
-1. The paragraph is split into French word tokens while preserving accented characters and apostrophes.
-2. The current word is passed to the browser speech synthesizer with `fr-FR` pronunciation.
-3. In Voice mode, the microphone listener advances only after recognizing “OK” (browsers may transcribe this as “okay”).
-4. In Button mode, no microphone listener is started.
+1. The paragraph is split into French word tokens while preserving accented characters and apostrophes, then AI-generated IPA, parts of speech, and Chinese meanings are shown for confirmation.
+2. Study and review use a click-to-advance player. Review mode never changes the first-learned date.
+3. Pronunciation uses only an installed French system voice (`fr-FR` preferred); the app never silently falls back to an English voice.
+4. CEFR recommendations are checked against FLELex/Beacco, and learned words can be reused in AI-generated sentence exercises.
 
 ## Privacy
 
-The entered paragraph is not saved. Only words explicitly saved through the learned-word form are stored in the connected database. Speech synthesis happens through the browser. Voice recognition behavior and processing depend on the browser implementation.
+The entered paragraph is not saved. Account passwords are stored as salted hashes, sessions use HttpOnly cookies, and vocabulary data is isolated by user account. Speech synthesis happens through the browser and depends on an installed French system voice.
 
 ## Technology
 
@@ -65,6 +65,8 @@ The entered paragraph is not saved. Only words explicitly saved through the lear
 - React 19
 - TypeScript
 - Neon Serverless Postgres
+- Hugging Face Inference (Qwen)
+- FLELex / Beacco CEFR lexicon
 
 ## Deploying to Vercel
 
@@ -75,3 +77,7 @@ Connect a Neon database through Vercel Marketplace so that the project receives 
 ## License
 
 No license has been specified.
+
+### Vocabulary data attribution
+
+CEFR validation uses **FLELex / Beacco** by François, Gala, Watrin & Fairon and Pintard & François, distributed by CENTAL, UCLouvain under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). This app uses the TreeTagger/Beacco edition (14,236 French lemmas, A1–C2) for educational, non-commercial use. [Official source](https://cental.uclouvain.be/cefrlex/flelex/download/).

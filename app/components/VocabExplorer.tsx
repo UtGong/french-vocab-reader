@@ -2,11 +2,11 @@
 
 import { FormEvent, useMemo, useState } from "react";
 
-type Related = { word: string; relationship: string; wordType: string; meaning: string };
-type Synonym = { word: string; wordType: string; meaning: string; difference: string };
-type PatternWord = { word: string; pattern: string; wordType: string; meaning: string };
-type Exploration = { word: string; wordType: string; meaning: string; relatedWords: Related[]; synonyms: Synonym[]; patternWords: PatternWord[] };
-type Candidate = { key: string; word: string; wordType: string; meaning: string; details: string; sourceWord: string };
+type Related = { word: string; phonetic: string; relationship: string; wordType: string; meaning: string; cefrLevel: string };
+type Synonym = { word: string; phonetic: string; wordType: string; meaning: string; difference: string; cefrLevel: string };
+type PatternWord = { word: string; phonetic: string; pattern: string; wordType: string; meaning: string; cefrLevel: string };
+type Exploration = { word: string; phonetic: string; wordType: string; meaning: string; cefrLevel: string; relatedWords: Related[]; synonyms: Synonym[]; patternWords: PatternWord[] };
+type Candidate = { key: string; word: string; phonetic: string; wordType: string; meaning: string; details: string; sourceWord: string };
 
 export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () => void; targetLevel: string }) {
   const [word, setWord] = useState("");
@@ -16,10 +16,10 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
   const [message, setMessage] = useState("");
   const [openSections, setOpenSections] = useState<string[]>(["related"]);
   const candidates = useMemo<Candidate[]>(() => result ? [
-    { key: "main", word: result.word, wordType: result.wordType, meaning: result.meaning, details: "核心词", sourceWord: result.word },
-    ...result.relatedWords.map((item, index) => ({ key: `related-${index}`, word: item.word, wordType: item.wordType, meaning: item.meaning, details: item.relationship, sourceWord: result.word })),
-    ...result.synonyms.map((item, index) => ({ key: `synonym-${index}`, word: item.word, wordType: item.wordType, meaning: item.meaning, details: item.difference, sourceWord: result.word })),
-    ...result.patternWords.map((item, index) => ({ key: `pattern-${index}`, word: item.word, wordType: item.wordType, meaning: item.meaning, details: item.pattern, sourceWord: result.word })),
+    { key: "main", word: result.word, phonetic: result.phonetic, wordType: result.wordType, meaning: result.meaning, details: `核心词 · ${result.cefrLevel}`, sourceWord: result.word },
+    ...result.relatedWords.map((item, index) => ({ key: `related-${index}`, word: item.word, phonetic: item.phonetic, wordType: item.wordType, meaning: item.meaning, details: `${item.relationship} · ${item.cefrLevel}`, sourceWord: result.word })),
+    ...result.synonyms.map((item, index) => ({ key: `synonym-${index}`, word: item.word, phonetic: item.phonetic, wordType: item.wordType, meaning: item.meaning, details: `${item.difference} · ${item.cefrLevel}`, sourceWord: result.word })),
+    ...result.patternWords.map((item, index) => ({ key: `pattern-${index}`, word: item.word, phonetic: item.phonetic, wordType: item.wordType, meaning: item.meaning, details: `${item.pattern} · ${item.cefrLevel}`, sourceWord: result.word })),
   ] : [], [result]);
 
   function toggle(key: string) { setSelected((keys) => keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]); }
@@ -52,10 +52,10 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
     {state === "error" && <p className="explorer-error">操作失败，请稍后重试。</p>}
     {result && <div className="explorer-result">
       <div className="selection-toolbar"><button onClick={() => setSelected(selected.length === candidates.length ? [] : candidates.map((item) => item.key))}>{selected.length === candidates.length ? "取消全选" : "全选"}</button><button className="add-selected" disabled={!selected.length || state === "saving"} onClick={addSelected}>{state === "saving" ? "正在加入…" : `加入学习清单（${selected.length}）`}</button><button onClick={() => setOpenSections(openSections.length === 3 ? [] : ["related", "synonyms", "patterns"])}>{openSections.length === 3 ? "全部收起" : "全部展开"}</button><span>{message}</span></div>
-      <label className="word-summary selectable">{checkbox("main", result.word)}<h4>{result.word}</h4><span>{result.wordType}</span><p>{result.meaning}</p></label>
-      <section className="fold-section">{sectionHeading("related", "相关词", result.relatedWords.length)}{openSections.includes("related") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>关系</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.relatedWords.map((item, index) => <tr key={`${item.word}-${item.relationship}`}><td>{checkbox(`related-${index}`, item.word)}</td><td>{item.word}</td><td>{item.relationship}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
-      <section className="fold-section">{sectionHeading("synonyms", "近义词与区别", result.synonyms.length)}{openSections.includes("synonyms") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>词性</th><th>中文</th><th>细微区别</th></tr></thead><tbody>{result.synonyms.map((item, index) => <tr key={item.word}><td>{checkbox(`synonym-${index}`, item.word)}</td><td>{item.word}</td><td>{item.wordType}</td><td>{item.meaning}</td><td>{item.difference}</td></tr>)}</tbody></table></div>}</section>
-      <section className="fold-section">{sectionHeading("patterns", "同形词", result.patternWords.length)}{openSections.includes("patterns") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>共同形式</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.patternWords.map((item, index) => <tr key={`${item.word}-${item.pattern}`}><td>{checkbox(`pattern-${index}`, item.word)}</td><td>{item.word}</td><td>{item.pattern}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
+      <label className="word-summary selectable">{checkbox("main", result.word)}<h4>{result.word}</h4><span>{result.phonetic || result.cefrLevel}</span><p>{result.wordType} · {result.meaning} · {result.cefrLevel}</p></label>
+      <section className="fold-section">{sectionHeading("related", "相关词", result.relatedWords.length)}{openSections.includes("related") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>等级</th><th>关系</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.relatedWords.map((item, index) => <tr key={`${item.word}-${item.relationship}`}><td>{checkbox(`related-${index}`, item.word)}</td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.cefrLevel}</td><td>{item.relationship}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
+      <section className="fold-section">{sectionHeading("synonyms", "近义词与区别", result.synonyms.length)}{openSections.includes("synonyms") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>等级</th><th>词性</th><th>中文</th><th>细微区别</th></tr></thead><tbody>{result.synonyms.map((item, index) => <tr key={item.word}><td>{checkbox(`synonym-${index}`, item.word)}</td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.cefrLevel}</td><td>{item.wordType}</td><td>{item.meaning}</td><td>{item.difference}</td></tr>)}</tbody></table></div>}</section>
+      <section className="fold-section">{sectionHeading("patterns", "同形词", result.patternWords.length)}{openSections.includes("patterns") && <div className="table-wrap"><table className="selectable-table"><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>等级</th><th>共同形式</th><th>词性</th><th>中文</th></tr></thead><tbody>{result.patternWords.map((item, index) => <tr key={`${item.word}-${item.pattern}`}><td>{checkbox(`pattern-${index}`, item.word)}</td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.cefrLevel}</td><td>{item.pattern}</td><td>{item.wordType}</td><td>{item.meaning}</td></tr>)}</tbody></table></div>}</section>
     </div>}
   </section>;
 }

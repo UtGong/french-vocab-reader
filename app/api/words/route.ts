@@ -11,7 +11,7 @@ export async function GET() {
     const sql = await ensureWordsTable();
     await ensureStudyQueueTable();
     await sql`DELETE FROM learned_words a USING learned_words b WHERE a.user_id = ${user.id} AND b.user_id = ${user.id} AND a.id > b.id AND LOWER(a.word) = LOWER(b.word)`;
-    const rows = await sql`SELECT id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at FROM learned_words WHERE user_id = ${user.id} ORDER BY learned_at DESC`;
+    const rows = await sql`SELECT id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at FROM learned_words WHERE user_id = ${user.id} ORDER BY learned_at DESC`;
     return NextResponse.json(rows);
   } catch (error) {
     console.error("Unable to load learned words", error);
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const word = typeof body.word === "string" ? body.word.trim() : "";
     const wordType = typeof body.wordType === "string" ? body.wordType.trim() : "";
     const meaning = typeof body.meaning === "string" ? body.meaning.trim() : "";
-    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120);
+    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120), phonetic = clean(body.phonetic, 120);
     if (!word || !wordType || !meaning || word.length > 120 || wordType.length > 40 || meaning.length > 500) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
@@ -34,8 +34,8 @@ export async function POST(request: Request) {
     await ensureStudyQueueTable();
     const existing = await sql`SELECT id FROM learned_words WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word}) LIMIT 1`;
     const rows = existing.length
-      ? await sql`UPDATE learned_words SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW() WHERE id = ${existing[0].id} AND user_id = ${user.id} RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
-      : await sql`INSERT INTO learned_words (user_id, word, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${word}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
+      ? await sql`UPDATE learned_words SET word = ${word}, phonetic = ${phonetic}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord} WHERE id = ${existing[0].id} AND user_id = ${user.id} RETURNING id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at`
+      : await sql`INSERT INTO learned_words (user_id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${word}, ${phonetic}, ${wordType}, ${meaning}, ${details}, ${sourceWord}) RETURNING id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     await sql`DELETE FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {
@@ -52,7 +52,7 @@ export async function PATCH(request: Request) {
     const word = typeof body.word === "string" ? body.word.trim() : "";
     const wordType = typeof body.wordType === "string" ? body.wordType.trim() : "";
     const meaning = typeof body.meaning === "string" ? body.meaning.trim() : "";
-    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120);
+    const details = clean(body.details, 1000), sourceWord = clean(body.sourceWord, 120), phonetic = clean(body.phonetic, 120);
     if (!Number.isInteger(id) || id < 1 || !word || !wordType || !meaning || word.length > 120 || wordType.length > 40 || meaning.length > 500) {
       return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
     }
@@ -61,9 +61,9 @@ export async function PATCH(request: Request) {
     const duplicate = await sql`SELECT id FROM learned_words WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word}) AND id <> ${id} LIMIT 1`;
     if (duplicate.length) return NextResponse.json({ error: "Duplicate word" }, { status: 409 });
     const rows = await sql`UPDATE learned_words
-      SET word = ${word}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}, learned_at = NOW()
+      SET word = ${word}, phonetic = ${phonetic}, word_type_zh = ${wordType}, meaning_zh = ${meaning}, details_zh = ${details}, source_word = ${sourceWord}
       WHERE id = ${id} AND user_id = ${user.id}
-      RETURNING id, word, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
+      RETURNING id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word, learned_at`;
     if (!rows[0]) return NextResponse.json({ error: "Word not found" }, { status: 404 });
     await sql`DELETE FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${word})`;
     return NextResponse.json(rows[0]);

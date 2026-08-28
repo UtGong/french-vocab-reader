@@ -50,7 +50,7 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /移回学习清单/);
   assert.match(page, /deleteLearnedWord/);
   assert.match(page, /const sample = "Je t’aime\."/);
-  assert.match(page, /word: "Je", word_type_zh: "代词", meaning_zh: "我"/);
+  assert.match(page, /word: "Je", phonetic: "\/ʒə\/", word_type_zh: "代词", meaning_zh: "我"/);
   assert.match(page, />法语文本</);
   assert.match(page, />开始</);
   assert.match(page, /selectedLearned/);
@@ -58,7 +58,8 @@ test("supports selecting, studying, and completing queued words", async () => {
   assert.match(page, /learnedGroups\.map/);
   assert.match(page, /details: item\.details_zh/);
   assert.doesNotMatch(page, /SpeechRecognition|webkitSpeechRecognition|chooseAdvance|正在等待“OK”/);
-  assert.match(page, /speechSynthesis\.getVoices\(\)\.find/);
+  assert.match(page, /speechSynthesis\.getVoices\(\)\.filter/);
+  assert.match(page, /startsWith\("fr"\)/);
   assert.match(page, /speechSynthesis\.resume\(\)/);
   assert.match(page, /下一个单词 →/);
   assert.match(page, /目标法语等级/);
@@ -131,4 +132,33 @@ test("provides an accurate countdown timer and stopwatch", async () => {
   assert.match(timer, /timerEnd\.current - Date\.now\(\)/);
   assert.match(timer, /stopwatchBase\.current/);
   assert.match(timer, /signalFinished/);
+});
+
+test("supports first-date grouping and review without changing learned dates", async () => {
+  const [page, wordsRoute] = await Promise.all([read("../app/page.tsx"), read("../app/api/words/route.ts")]);
+  assert.match(page, /按首次学习日期/);
+  assert.match(page, /复习已选/);
+  assert.match(page, /studyMode\.current === "review"/);
+  assert.match(page, /beginStudy\(selected, "review"\)/);
+  assert.doesNotMatch(wordsRoute, /source_word = \$\{sourceWord\}, learned_at = NOW\(\)/);
+});
+
+test("previews analyzed text with IPA before learning", async () => {
+  const [page, analyze] = await Promise.all([read("../app/page.tsx"), read("../app/api/analyze-text/route.ts")]);
+  assert.match(page, /className="text-preview"/);
+  assert.match(page, /学习已选词汇/);
+  assert.doesNotMatch(page.slice(page.indexOf("async function prepareText"), page.indexOf("async function deleteQueueWord")), /beginStudy\(prepared\)/);
+  assert.match(analyze, /French IPA enclosed in \/slashes\//);
+});
+
+test("uses FLELex to constrain CEFR suggestions and generates learned-word sentences", async () => {
+  const [lexicon, explore, sentence, page] = await Promise.all([
+    read("../lib/cefr-lexicon.ts"), read("../app/api/explore/route.ts"),
+    read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"),
+  ]);
+  assert.match(lexicon, /flelex-beacco\.json/);
+  assert.match(explore, /isAtOrBelowTarget/);
+  assert.match(sentence, /ORDER BY RANDOM\(\) LIMIT 5/);
+  assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
+  assert.match(page, /currentPhonetic/);
 });

@@ -176,15 +176,16 @@ test("previews analyzed text with IPA before learning", async () => {
   assert.doesNotMatch(page, /prepared\.length !== parsed\.length/);
 });
 
-test("uses FLELex to constrain CEFR suggestions and generates learned-word sentences", async () => {
+test("uses FLELex to constrain CEFR suggestions and generates learned-word stories", async () => {
   const [lexicon, explore, sentence, page] = await Promise.all([
     read("../lib/cefr-lexicon.ts"), read("../app/api/explore/route.ts"),
     read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"),
   ]);
   assert.match(lexicon, /flelex-beacco\.json/);
   assert.match(explore, /isAtOrBelowTarget/);
-  assert.match(sentence, /ORDER BY RANDOM\(\) LIMIT 5/);
-  assert.match(sentence, /Maximize reuse of these learned words/);
+  assert.match(sentence, /learned\.slice\(0, 120\)/);
+  assert.match(sentence, /Reuse as many AVAILABLE LEARNED VOCABULARY/);
+  assert.match(sentence, /newWords/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
   assert.match(page, /currentPhonetic/);
 });

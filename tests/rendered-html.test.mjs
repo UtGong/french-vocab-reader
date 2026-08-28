@@ -255,6 +255,8 @@ test("builds an editable multi-group vocabulary knowledge graph every five new w
   assert.match(component, /全选本组/);
   assert.match(component, /复习本组/);
   assert.match(component, /编辑分组/);
+  assert.match(component, /剩余 \$\{pending\} 个/);
+  assert.match(component, /while \(true\)/);
   assert.match(page, />词汇图谱</);
   assert.match(page, /<KnowledgeGraph learned=\{learned\}/);
   assert.match(css, /\.graph-canvas/);

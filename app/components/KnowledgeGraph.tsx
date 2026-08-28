@@ -33,7 +33,17 @@ export default function KnowledgeGraph({ learned, onReview }: { learned: Learned
 
   const refresh = useCallback(async (force = false) => {
     setRefreshing(true); setStatus("AI 正在整理词汇关系…");
-    try { const response = await fetch("/api/knowledge-graph", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "refresh", force }) }); if (!response.ok) throw new Error(); const result = await response.json(); setData(result); setActiveGroupId((current) => current ?? result.groups[0]?.id ?? null); setStatus(result.refresh?.updated ? `已整理 ${result.refresh.updated} 个词汇` : "图谱已是最新"); }
+    try {
+      let total = 0;
+      while (true) {
+        const response = await fetch("/api/knowledge-graph", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "refresh", force }) });
+        if (!response.ok) throw new Error();
+        const result = await response.json();
+        total += Number(result.refresh?.updated || 0); setData(result); setActiveGroupId((current) => current ?? result.groups[0]?.id ?? null);
+        const pending = Number(result.pending || 0); setStatus(pending ? `已整理 ${total} 个词汇，剩余 ${pending} 个…` : total ? `已完成 ${total} 个词汇的智能分组` : "图谱已是最新");
+        if (!force || !pending || !result.refresh?.updated) break;
+      }
+    }
     catch { setStatus("智能整理失败，请稍后重试"); }
     finally { setRefreshing(false); }
   }, []);

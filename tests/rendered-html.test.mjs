@@ -183,11 +183,13 @@ test("uses FLELex to constrain CEFR suggestions and generates annotated vocabula
   ]);
   assert.match(lexicon, /flelex-beacco\.json/);
   assert.match(explore, /isAtOrBelowTarget/);
-  assert.match(sentence, /learned\.slice\(0, 120\)/);
+  assert.match(sentence, /\[\.\.\.fresh, \.\.\.recentlyUsed\]\.slice\(0, 120\)/);
   assert.match(sentence, /Reuse as many AVAILABLE LEARNED VOCABULARY/);
   assert.match(sentence, /newWords/);
   assert.match(sentence, /exact surface form/);
   assert.match(sentence, /requiredWords/);
+  assert.match(sentence, /RECENTLY USED VOCABULARY TO AVOID/);
+  assert.match(sentence, /const fresh = shuffle/);
   assert.match(practice, />一个句子</);
   assert.match(practice, /下次优先使用/);
   assert.match(practice, /选择词汇/);
@@ -196,6 +198,8 @@ test("uses FLELex to constrain CEFR suggestions and generates annotated vocabula
   assert.doesNotMatch(generation, /present\.has/);
   assert.match(sentence, /no more than TWO unique words/);
   assert.match(practice, /item\.forms/);
+  assert.match(practice, /avoidWords: recentWords/);
+  assert.match(practice, /setRecentWords/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
   assert.match(page, /currentPhonetic/);
 });

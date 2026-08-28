@@ -33,14 +33,15 @@ function AnnotatedText({ text, learned, unknown, selected, selectionMode, onSele
 
 export default function SentencePractice({ targetLevel, onUpdated }: { targetLevel: string; onUpdated?: () => void }) {
   const [result, setResult] = useState<Result | null>(null), [genre, setGenre] = useState<Genre>("melodrama"), [format, setFormat] = useState<Format>("story"), [showChinese, setShowChinese] = useState(false);
-  const [selectedNext, setSelectedNext] = useState<Vocabulary[]>([]), [selectionMode, setSelectionMode] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(""), [saveStatus, setSaveStatus] = useState("");
+  const [selectedNext, setSelectedNext] = useState<Vocabulary[]>([]), [recentWords, setRecentWords] = useState<string[]>([]), [selectionMode, setSelectionMode] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(""), [saveStatus, setSaveStatus] = useState("");
   async function generate() {
     setLoading(true); setError(""); setSaveStatus(""); setShowChinese(false);
     try {
-      const response = await fetch("/api/generate-sentence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetLevel, genre, format, requiredWords: selectedNext.map((item) => item.word) }) });
+      const response = await fetch("/api/generate-sentence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetLevel, genre, format, requiredWords: selectedNext.map((item) => item.word), avoidWords: recentWords }) });
       const data: Result & { error?: string } = await response.json();
       if (!response.ok) throw new Error(data.error);
       setResult(data);
+      setRecentWords((previous) => Array.from(new Set([...data.usedWords.map((item) => normalize(item.word)), ...previous])).slice(0, 80));
       setSelectionMode(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "生成失败"); } finally { setLoading(false); }
   }

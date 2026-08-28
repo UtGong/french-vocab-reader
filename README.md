@@ -65,7 +65,7 @@ The entered paragraph is not saved. Account passwords are stored as salted hashe
 - React 19
 - TypeScript
 - Neon Serverless Postgres
-- Hugging Face Inference (Qwen)
+- SCNet Token Plan（默认使用 `DeepSeek-V4-Flash`）
 - FLELex / Beacco CEFR lexicon
 
 ## Deploying to Vercel
@@ -73,6 +73,8 @@ The entered paragraph is not saved. Account passwords are stored as salted hashe
 Import this GitHub repository in Vercel and keep the framework preset set to **Next.js**. The standard build command is `npm run build`; no output-directory override is required.
 
 Connect a Neon database through Vercel Marketplace so that the project receives a `DATABASE_URL` environment variable. The app creates its `learned_words` table automatically on first use.
+
+Add `SCNET_API_KEY` as a secret environment variable for all environments. AI features use `DeepSeek-V4-Flash` by default; optionally set `SCNET_MODEL` to another model ID supported by the SCNet Token Plan.
 
 ## License
 

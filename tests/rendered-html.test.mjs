@@ -102,11 +102,12 @@ test("preserves grouping context when words move between lists", async () => {
   assert.match(wordsRoute, /details_zh = \$\{details\}, source_word = \$\{sourceWord\}/);
 });
 
-test("uses the configured Hugging Face model without exposed credentials", async () => {
-  const helper = await read("../lib/huggingface.ts");
-  assert.match(helper, /Qwen\/Qwen3\.5-27B:novita/);
-  assert.match(helper, /process\.env\.HF_TOKEN/);
-  assert.match(helper, /enable_thinking: false/);
+test("uses the configured SCNet model without exposed credentials", async () => {
+  const helper = await read("../lib/scnet.ts");
+  assert.match(helper, /DeepSeek-V4-Flash/);
+  assert.match(helper, /process\.env\.SCNET_API_KEY/);
+  assert.match(helper, /api\.scnet\.cn\/api\/llm\/v1/);
+  assert.match(helper, /process\.env\.SCNET_MODEL/);
   assert.doesNotMatch(helper, /hf_[A-Za-z0-9]+/);
 });
 

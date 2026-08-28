@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { askLanguageModel } from "@/lib/huggingface";
+import { askLanguageModel } from "@/lib/scnet";
 import { getCurrentUser } from "@/lib/auth";
 
 const allowedTypes = ["名词", "动词", "代词", "形容词", "副词", "介词", "连词", "冠词", "数词", "感叹词", "短语", "其他"];

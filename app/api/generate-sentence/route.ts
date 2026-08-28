@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureWordsTable } from "@/lib/db";
-import { askLanguageModel } from "@/lib/huggingface";
+import { askLanguageModel } from "@/lib/scnet";
 
 const allowedLevels = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
 const clean = (value: unknown, limit = 800) => typeof value === "string" ? value.trim().slice(0, limit) : "";

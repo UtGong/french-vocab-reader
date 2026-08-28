@@ -48,7 +48,7 @@ export default function VocabExplorer({ onQueued, targetLevel }: { onQueued: () 
   const sectionHeading = (section: string, title: string, keys: string[]) => <div className="fold-heading"><button type="button" aria-expanded={openSections.includes(section)} onClick={() => toggleSection(section)}><span><b>{title}</b><small>{keys.length} 个词</small></span><i>{openSections.includes(section) ? "收起 −" : "展开 +"}</i></button><button type="button" className="section-select" onClick={() => toggleSectionSelection(keys)}>{keys.every((key) => selected.includes(key)) ? "取消本组" : "全选本组"}</button></div>;
 
   return <section className="vocab-explorer">
-    <div className="explorer-heading"><div><p className="panel-kicker">法语词汇助手 · {targetLevel}</p><h3>词汇联想</h3></div><span>Qwen</span></div>
+    <div className="explorer-heading"><div><p className="panel-kicker">法语词汇助手 · {targetLevel}</p><h3>词汇联想</h3></div><span>SCNet</span></div>
     <form onSubmit={explore}><label htmlFor="explore-word">输入一个法语词汇</label><div><input id="explore-word" value={word} onChange={(event) => setWord(event.target.value)} placeholder="例如：fringant" autoComplete="off" /><button disabled={state === "loading"}>{state === "loading" ? "分析中…" : "生成相关词"}</button></div></form>
     {state === "error" && <p className="explorer-error">操作失败，请稍后重试。</p>}
     {result && <div className="explorer-result">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { askLanguageModel } from "@/lib/huggingface";
+import { askLanguageModel } from "@/lib/scnet";
 import { getCurrentUser } from "@/lib/auth";
 import { getCefrLevel, getCefrPromptContext, isAtOrBelowTarget } from "@/lib/cefr-lexicon";
 

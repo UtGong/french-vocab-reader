@@ -1,10 +1,11 @@
-const MODEL = "Qwen/Qwen3.5-27B:novita";
+const MODEL = process.env.SCNET_MODEL || "DeepSeek-V4-Flash";
+const BASE_URL = "https://api.scnet.cn/api/llm/v1";
 
 export async function askLanguageModel(prompt: string, maxTokens = 1200) {
-  const token = process.env.HF_TOKEN;
-  if (!token) throw new Error("HF_TOKEN is not configured");
+  const token = process.env.SCNET_API_KEY;
+  if (!token) throw new Error("SCNET_API_KEY is not configured");
 
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+  const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -12,7 +13,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
       temperature: 0.15,
       max_tokens: maxTokens,
       top_p: 0.8,
-      chat_template_kwargs: { enable_thinking: false },
+      stream: false,
       messages: [
         { role: "system", content: "You are a careful French lexicographer and French-to-Simplified-Chinese teacher. Return only valid JSON. Never invent a word or an etymological relationship." },
         { role: "user", content: prompt },
@@ -20,11 +21,11 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
     }),
     signal: AbortSignal.timeout(25000),
   });
-  if (!response.ok) throw new Error(`Hugging Face returned ${response.status}: ${await response.text()}`);
+  if (!response.ok) throw new Error(`SCNet returned ${response.status}: ${await response.text()}`);
   const payload = await response.json();
   const content = payload.choices?.[0]?.message?.content;
-  if (typeof content !== "string") throw new Error("Hugging Face response had no content");
+  if (typeof content !== "string") throw new Error("SCNet response had no content");
   const match = content.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("Hugging Face response was not JSON");
+  if (!match) throw new Error("SCNet response was not JSON");
   return JSON.parse(match[0]);
 }

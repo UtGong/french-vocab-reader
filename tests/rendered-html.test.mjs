@@ -177,9 +177,9 @@ test("previews analyzed text with IPA before learning", async () => {
 });
 
 test("uses FLELex to constrain CEFR suggestions and generates annotated vocabulary stories", async () => {
-  const [lexicon, explore, sentence, page, practice] = await Promise.all([
+  const [lexicon, explore, sentence, page, practice, chat] = await Promise.all([
     read("../lib/cefr-lexicon.ts"), read("../app/api/explore/route.ts"),
-    read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"), read("../app/components/SentencePractice.tsx"),
+    read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"), read("../app/components/SentencePractice.tsx"), read("../app/api/story-chat/route.ts"),
   ]);
   assert.match(lexicon, /flelex-beacco\.json/);
   assert.match(explore, /isAtOrBelowTarget/);
@@ -200,6 +200,10 @@ test("uses FLELex to constrain CEFR suggestions and generates annotated vocabula
   assert.match(practice, /item\.forms/);
   assert.match(practice, /avoidWords: recentWords/);
   assert.match(practice, /setRecentWords/);
+  assert.match(practice, /fetch\("\/api\/story-chat"/);
+  assert.match(practice, /询问当前内容/);
+  assert.match(chat, /getCurrentUser/);
+  assert.match(chat, /RECENT CONVERSATION/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
   assert.match(page, /currentPhonetic/);
 });

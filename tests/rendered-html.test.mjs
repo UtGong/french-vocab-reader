@@ -177,9 +177,9 @@ test("previews analyzed text with IPA before learning", async () => {
 });
 
 test("uses FLELex to constrain CEFR suggestions and generates annotated vocabulary stories", async () => {
-  const [lexicon, explore, sentence, page, practice, chat] = await Promise.all([
+  const [lexicon, explore, sentence, page, practice, chat, deepl] = await Promise.all([
     read("../lib/cefr-lexicon.ts"), read("../app/api/explore/route.ts"),
-    read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"), read("../app/components/SentencePractice.tsx"), read("../app/api/story-chat/route.ts"),
+    read("../app/api/generate-sentence/route.ts"), read("../app/page.tsx"), read("../app/components/SentencePractice.tsx"), read("../app/api/story-chat/route.ts"), read("../lib/deepl.ts"),
   ]);
   assert.match(lexicon, /flelex-beacco\.json/);
   assert.match(explore, /isAtOrBelowTarget/);
@@ -204,12 +204,17 @@ test("uses FLELex to constrain CEFR suggestions and generates annotated vocabula
   assert.match(practice, /询问当前内容/);
   assert.match(chat, /getCurrentUser/);
   assert.match(chat, /RECENT CONVERSATION/);
+  assert.match(sentence, /translateFrenchToChinese/);
+  assert.match(sentence, /translationSource = "DeepL"/);
+  assert.match(deepl, /process\.env\.DEEPL_API_KEY/);
+  assert.match(deepl, /api-free\.deepl\.com/);
+  assert.match(deepl, /target_lang: "ZH-HANS"/);
   assert.match(page, /<SentencePractice targetLevel=\{targetLevel\}/);
   assert.match(page, /currentPhonetic/);
 });
 
 test("keeps secondary controls in settings and provides a simple dictionary", async () => {
-  const [page, dictionary] = await Promise.all([read("../app/page.tsx"), read("../app/components/Dictionary.tsx")]);
+  const [page, dictionary, analyze, lexicala] = await Promise.all([read("../app/page.tsx"), read("../app/components/Dictionary.tsx"), read("../app/api/analyze/route.ts"), read("../lib/lexicala.ts")]);
   assert.match(page, /<details className="settings-panel">/);
   assert.doesNotMatch(page, /<details className="settings-panel" open/);
   assert.match(page, /<Dictionary onUpdated=/);
@@ -223,6 +228,12 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(dictionary, /utterance\.lang = "fr-FR"/);
   assert.match(dictionary, /加入待学习/);
   assert.match(dictionary, /标为已学/);
+  assert.match(dictionary, /entry\.source/);
+  assert.match(analyze, /lookupFrenchChinese/);
+  assert.match(analyze, /Lexicala lookup unavailable/);
+  assert.match(lexicala, /process\.env\.LEXICALA_API_KEY/);
+  assert.match(lexicala, /targetLang: "zh"/);
+  assert.match(lexicala, /morph: "true"/);
   assert.match(dictionary, /fetch\(destination === "queue" \? "\/api\/queue" : "\/api\/words"/);
   assert.match(page, /全选本组/);
   assert.match(page, /toggleLearnedGroup/);

@@ -227,6 +227,7 @@
 .story-vocab-actions button:last-child { background: var(--green); color: white; }
 .story-vocab-actions button.selected { border-color: #5c82b5; background: #5c82b5; color: white; }
 .story-translation-heading { justify-content: flex-end; margin: 13px 0 8px; }
+.story-translation-heading span { margin-right: auto; color: var(--muted); font-size: 8px; }
 .sentence-result .story-translation { margin: 0 0 12px; padding: 12px; border-radius: 7px; background: var(--soft); font-size: 12px; line-height: 1.7; }
 .story-save-status { color: var(--green); font-size: 10px; }
 .sentence-result small { color: var(--muted); font-size: 10px; }

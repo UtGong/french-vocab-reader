@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureWordsTable } from "@/lib/db";
 import { askLanguageModel } from "@/lib/scnet";
+import { translateFrenchToChinese } from "@/lib/deepl";
 
 const allowedLevels = new Set(["A1", "A2", "B1", "B2", "C1", "C2"]);
 const allowedGenres = new Set(["melodrama", "ghost"]);
@@ -60,7 +61,11 @@ Return exactly JSON: {"title":"French title or empty string for sentence format"
     const usedWords = learned.filter((item) => usedData.has(item.word.toLocaleLowerCase("fr"))).map((item) => ({ ...item, forms: usedData.get(item.word.toLocaleLowerCase("fr")) ?? [item.word] }));
     const learnedSet = new Set(learned.map((item) => item.word.toLocaleLowerCase("fr")));
     const newWords: Vocabulary[] = Array.isArray(result.newWords) ? result.newWords.slice(0, 100).map((item: Record<string, unknown>) => { const word = clean(item.word, 120); return { word, forms: forms(item.forms, word), phonetic: clean(item.phonetic, 120), wordType: clean(item.wordType, 40), meaning: clean(item.meaning, 500) }; }).filter((item: Vocabulary) => item.word && item.wordType && item.meaning && !learnedSet.has(item.word.toLocaleLowerCase("fr"))) : [];
-    const response = { format, title: clean(result.title, 180), story: clean(result.story), translation: clean(result.translation), usedWords, newWords, note: clean(result.note, 800) };
+    const story = clean(result.story), fallbackTranslation = clean(result.translation);
+    let translation = fallbackTranslation, translationSource = "SCNet";
+    try { translation = await translateFrenchToChinese(story); translationSource = "DeepL"; }
+    catch (error) { console.warn("DeepL translation unavailable; using SCNet fallback", error); }
+    const response = { format, title: clean(result.title, 180), story, translation, translationSource, usedWords, newWords, note: clean(result.note, 800) };
     if (!response.story || !response.translation) throw new Error("Incomplete creative text");
     return NextResponse.json(response);
   } catch (error) {

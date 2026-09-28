@@ -81,7 +81,7 @@ export default function DocumentImporter({ onImported }: Props) {
     if (!selected.length || importing) return;
     setImporting(true); setError(""); setMessage("");
     try {
-      const response = await fetch("/api/import-vocabulary", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target, items: selected.map((index) => words[index]) }) });
+      const response = await fetch("/api/import-vocabulary", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target, items: selected.map((index) => { const item = words[index]; return { word: item.word, phonetic: item.phonetic, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh, sourceWord: item.source_word }; }) }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "导入失败");
       setMessage(`已导入 ${data.saved} 个词${data.skipped ? `，跳过 ${data.skipped} 个重复或无效词` : ""}。`);

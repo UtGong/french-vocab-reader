@@ -144,6 +144,7 @@
 .primary-switch.three-tabs { grid-template-columns: repeat(3, 1fr); }
 .primary-switch.four-tabs { grid-template-columns: repeat(4, 1fr); }
 .primary-switch.five-tabs { grid-template-columns: repeat(5, 1fr); }
+.primary-switch.six-tabs { grid-template-columns: repeat(6, 1fr); }
 .settings-panel { margin: -7px 0 20px; border: 1px solid var(--line); border-radius: 8px; background: #faf8fc; }
 .settings-panel summary { display: flex; align-items: center; gap: 9px; padding: 10px 13px; color: var(--green); cursor: pointer; list-style-position: inside; }
 .settings-panel summary b { font-size: 11px; }
@@ -360,4 +361,22 @@
 .knowledge-editor > div > div:last-child { display: flex; justify-content: flex-end; gap: 7px; }
 .knowledge-editor button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--green); font-weight: 700; cursor: pointer; }
 .knowledge-editor button.primary { border-color: var(--green); background: var(--green); color: white; }
-@media (max-width: 700px) { .primary-switch.five-tabs { grid-template-columns: repeat(2, 1fr); } .knowledge-heading, .knowledge-toolbar { align-items: flex-start; flex-wrap: wrap; } .knowledge-toolbar > span { width: 100%; margin-left: 0; } .lead-word-picker { width: 100%; } .lead-picker-panel { width: 100%; } .knowledge-members { grid-template-columns: 1fr; } .core-word-lead { grid-template-columns: auto 1fr; } .core-word-lead button { grid-column: 1 / -1; grid-row: auto; } .date-word-list { overflow-x: auto; } .date-word-head, .date-word-list label { min-width: 620px; } .graph-layout { grid-template-columns: 1fr; } .graph-layout aside { flex-direction: row; max-height: none; overflow-x: auto; } .graph-layout aside button { min-width: 120px; } .graph-canvas { min-height: 400px; } .graph-node { width: 78px; } }
+@media (max-width: 700px) { .primary-switch.five-tabs, .primary-switch.six-tabs { grid-template-columns: repeat(2, 1fr); } .knowledge-heading, .knowledge-toolbar { align-items: flex-start; flex-wrap: wrap; } .knowledge-toolbar > span { width: 100%; margin-left: 0; } .lead-word-picker { width: 100%; } .lead-picker-panel { width: 100%; } .knowledge-members { grid-template-columns: 1fr; } .core-word-lead { grid-template-columns: auto 1fr; } .core-word-lead button { grid-column: 1 / -1; grid-row: auto; } .date-word-list { overflow-x: auto; } .date-word-head, .date-word-list label { min-width: 620px; } .graph-layout { grid-template-columns: 1fr; } .graph-layout aside { flex-direction: row; max-height: none; overflow-x: auto; } .graph-layout aside button { min-width: 120px; } .graph-canvas { min-height: 400px; } .graph-node { width: 78px; } }
+
+.document-importer { margin-top: 4px; padding: 20px; border: 1px solid var(--line); border-radius: 9px; background: #faf8fc; }
+.import-intro { margin: 9px 0 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.import-file-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 13px; border: 1px dashed #cfc5dc; border-radius: 8px; background: white; }
+.import-file-row input { min-width: 0; max-width: 100%; color: var(--ink); font: inherit; }
+.import-file-row small, .import-file-row span { color: var(--muted); font-size: 10px; }
+.import-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 17px 0 8px; color: var(--muted); font-size: 11px; }
+.import-summary b { color: var(--ink); }
+.import-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.import-actions button, .import-actions label { min-height: 36px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--green); font-size: 11px; font-weight: 700; }
+.import-actions button { cursor: pointer; }
+.import-actions label { display: inline-flex; align-items: center; gap: 8px; }
+.import-actions select { border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600; }
+.import-actions .import-submit { margin-left: auto; border-color: var(--green); background: var(--green); color: white; }
+.import-actions button:disabled { opacity: .55; cursor: default; }
+.import-message { color: var(--green); font-size: 12px; }
+.import-table td small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+@media (max-width: 700px) { .document-importer { padding: 14px; } .import-actions .import-submit { margin-left: 0; } .import-actions { align-items: stretch; } }

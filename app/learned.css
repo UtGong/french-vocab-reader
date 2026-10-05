@@ -35,6 +35,7 @@
 .french-side, .chinese-side { min-height: 150px; padding: 18px; border-radius: 8px; }
 .french-side { display: grid; align-content: center; text-align: center; background: #ffffff12; border: 1px solid #ffffff26; }
 .french-side small, .chinese-side small { color: #d8cee6; font-size: 9px; text-transform: uppercase; letter-spacing: .8px; }
+.phonetic-retry { justify-self: center; margin-top: 5px; padding: 4px 9px; border: 1px solid #ffffff66; border-radius: 12px; background: #ffffff18; color: white; font-size: 10px; cursor: pointer; }
 .french-side h2 { margin: 12px 0; }
 .chinese-side { background: white; color: var(--ink); }
 .chinese-side small { display: block; color: var(--muted); margin-bottom: 12px; }

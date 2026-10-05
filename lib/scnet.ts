@@ -1,7 +1,7 @@
 const MODEL = process.env.SCNET_MODEL || "Qwen3.8-Max";
 const BASE_URL = "https://api.scnet.cn/api/llm/v1";
 
-export async function askLanguageModel(prompt: string, maxTokens = 1200) {
+export async function askLanguageModel(prompt: string, maxTokens = 1200, timeoutMs = 50000) {
   const token = process.env.SCNET_API_KEY;
   if (!token) throw new Error("SCNET_API_KEY is not configured");
 
@@ -21,7 +21,7 @@ export async function askLanguageModel(prompt: string, maxTokens = 1200) {
         { role: "user", content: prompt },
       ],
     }),
-    signal: AbortSignal.timeout(50000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) throw new Error(`SCNet returned ${response.status}: ${await response.text()}`);
   const payload = await response.json();

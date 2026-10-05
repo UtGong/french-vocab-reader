@@ -5,9 +5,10 @@ import { askLanguageModel } from "@/lib/scnet";
 const keyOf = (value: string) => value.trim().toLocaleLowerCase("fr");
 const asIpa = (value: unknown) => {
   if (typeof value !== "string") return "";
-  const phonetic = value.trim().slice(0, 120);
-  return phonetic && !phonetic.startsWith("/") ? `/${phonetic}/` : phonetic;
+  const phonetic = value.trim().replace(/^[/\[]|[/\]]$/g, "").trim().slice(0, 120);
+  return phonetic ? `/${phonetic}/` : "";
 };
+const phoneticOf = (value: Record<string, unknown>) => asIpa(value.phonetic ?? value.ipa ?? value.pronunciation ?? value.pronunciation_ipa);
 
 async function concurrent<T>(items: T[], limit: number, task: (item: T) => Promise<void>) {
   let cursor = 0;
@@ -37,13 +38,13 @@ export async function generateFrenchPhonetics(input: string[]) {
   for (let start = 0; start < missing.length; start += 12) {
     const batch = missing.slice(start, start + 12);
     try {
-      const result = await askLanguageModel(`Provide standard French IPA pronunciations for every supplied item. Preserve each spelling exactly. Return exactly {"items":[{"word":"exact supplied spelling","phonetic":"IPA enclosed in /slashes/"}]}. Do not translate, omit, or add words. Items: ${JSON.stringify(batch)}`, 900);
-      const entries = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : [];
+      const result = await askLanguageModel(`Provide standard French IPA pronunciations for every supplied item. Preserve each spelling exactly. Return exactly {"items":[{"word":"exact supplied spelling","phonetic":"IPA without surrounding slashes"}]}. Do not translate, omit, or add words. Items: ${JSON.stringify(batch)}`, 900, 18000);
+      const entries = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : Array.isArray(result.results) ? result.results as Array<Record<string, unknown>> : [];
       for (const item of entries) {
         if (typeof item.word !== "string") continue;
         const key = keyOf(item.word);
         if (!batch.some((word) => keyOf(word) === key)) continue;
-        const phonetic = asIpa(item.phonetic);
+        const phonetic = phoneticOf(item);
         if (phonetic) pronunciations.set(key, phonetic);
       }
     } catch (error) { console.error("Unable to batch-generate French IPA", error); }
@@ -52,8 +53,8 @@ export async function generateFrenchPhonetics(input: string[]) {
   const stillMissing = words.filter((word) => !pronunciations.has(keyOf(word)));
   await concurrent(stillMissing, 8, async (word) => {
     try {
-      const result = await askLanguageModel(`Give the standard French IPA pronunciation of ${JSON.stringify(word)}. Return exactly {"phonetic":"IPA enclosed in /slashes/"}.`, 160);
-      const phonetic = asIpa(result.phonetic);
+      const result = await askLanguageModel(`Give the standard French IPA pronunciation of ${JSON.stringify(word)}. Return exactly {"phonetic":"IPA without surrounding slashes"}.`, 160, 18000);
+      const phonetic = phoneticOf(result);
       if (phonetic) pronunciations.set(keyOf(word), phonetic);
     } catch (error) { console.warn(`Unable to generate pronunciation for ${word}`, error); }
   });

@@ -9,6 +9,13 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const providersConfigured = {
+      lexicala: Boolean(process.env.LEXICALA_API_KEY),
+      scnet: Boolean(process.env.SCNET_API_KEY),
+    };
+    if (!providersConfigured.lexicala && !providersConfigured.scnet) {
+      return NextResponse.json({ error: "音标服务未配置，请在部署环境添加 Lexicala 或 SCNet API 密钥" }, { status: 503 });
+    }
     const sql = await ensureStudyQueueTable();
     await ensureWordsTable();
     const [learned, queued] = await Promise.all([
@@ -26,7 +33,7 @@ export async function POST(request: Request) {
     ]);
     const stillMissing = Array.from(new Map([...remainingLearned, ...remainingQueued].map((row) => [String(row.word).toLocaleLowerCase("fr"), String(row.word)])).values());
     const failedWords = batch.filter((word) => stillMissing.some((missing) => missing.toLocaleLowerCase("fr") === word.toLocaleLowerCase("fr")));
-    return NextResponse.json({ queued: words.length, processed: batch.length, updated: batch.length - failedWords.length, failedWords, remaining: stillMissing.length });
+    return NextResponse.json({ queued: words.length, processed: batch.length, updated: batch.length - failedWords.length, failedWords, remaining: stillMissing.length, providersConfigured });
   } catch (error) {
     console.error("Unable to start IPA backfill", error);
     return NextResponse.json({ error: "无法开始音标补全" }, { status: 503 });

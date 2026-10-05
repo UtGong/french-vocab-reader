@@ -39,6 +39,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const [phoneticBackfillInProgress, setPhoneticBackfillInProgress] = useState(false);
   const [phoneticBackfillProgress, setPhoneticBackfillProgress] = useState("");
   const [phoneticFailedWords, setPhoneticFailedWords] = useState<string[]>([]);
+  const [phoneticBackfillError, setPhoneticBackfillError] = useState(false);
   const [mode, setMode] = useState<"text" | "explore" | "dictionary" | "sentence" | "knowledge" | "import">("text");
   const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
@@ -101,6 +102,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     phoneticBackfillMonitor.current = true;
     setPhoneticBackfillInProgress(true);
     setPhoneticBackfillProgress("检查词表…");
+    setPhoneticBackfillError(false);
     const excluded = new Set<string>();
     let failed: string[] = [];
     let resolved = 0;
@@ -109,8 +111,8 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     try {
       for (let attempt = 0; attempt < 500; attempt += 1) {
         const response = await fetch("/api/phonetic/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ excludeWords: Array.from(excluded) }) });
-        if (!response.ok) throw new Error("音标补全请求失败");
         const result = await response.json();
+        if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "音标补全请求失败");
         const batchFailed = Array.isArray(result.failedWords) ? result.failedWords.filter((word: unknown): word is string => typeof word === "string") : [];
         batchFailed.forEach((word: string) => excluded.add(word.toLocaleLowerCase("fr")));
         failed = Array.from(new Set([...failed, ...batchFailed]));
@@ -130,12 +132,12 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
         }
         if (!Number(result.remaining) || !Number(result.processed)) break;
       }
-    } catch (error) { interrupted = true; console.warn("Unable to complete background French IPA", error); setPhoneticBackfillProgress("音标补全中断，请刷新后重试"); }
+    } catch (error) { interrupted = true; setPhoneticBackfillError(true); console.warn("Unable to complete background French IPA", error); setPhoneticBackfillProgress(error instanceof Error ? error.message : "音标补全中断，请稍后重试"); }
     finally {
       phoneticBackfillMonitor.current = false;
       setPhoneticBackfillInProgress(false);
       if (!failed.length && !interrupted) setPhoneticBackfillProgress("");
-      else setPhoneticBackfillProgress(`有 ${failed.length} 个词暂未查到音标；刷新后会重试`);
+      else if (!interrupted) setPhoneticBackfillProgress(`有 ${failed.length} 个词暂未查到音标；可重试查询`);
     }
   }, []);
   useEffect(() => { startPhoneticBackfill(); }, [startPhoneticBackfill]);
@@ -349,7 +351,8 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   }
 
   const currentItem = studyWords[index];
-  const currentPhonetic = currentItem?.phonetic || (phoneticBackfillInProgress ? `后台补全中… ${phoneticBackfillProgress}` : phoneticFailedWords.some((word) => word.toLocaleLowerCase("fr") === currentItem?.word.toLocaleLowerCase("fr")) ? "音标查询失败，刷新后重试" : "音标待补全");
+  const currentWordFailed = phoneticFailedWords.some((word) => word.toLocaleLowerCase("fr") === currentItem?.word.toLocaleLowerCase("fr"));
+  const currentPhonetic = currentItem?.phonetic || (phoneticBackfillInProgress ? `后台补全中… ${phoneticBackfillProgress}` : phoneticBackfillError ? phoneticBackfillProgress : currentWordFailed ? "暂未查到音标" : "音标待补全");
 
   return <main>
     <MilestoneCelebration milestone={celebration} onClose={() => setCelebration(null)} />
@@ -369,7 +372,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       <StudyTimer />
       <section className="player" ref={playerRef}>
         <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
-        <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small><h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
+        <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small>{!phoneticBackfillInProgress && (phoneticBackfillError || currentWordFailed) && <button className="phonetic-retry" onClick={() => startPhoneticBackfill()}>重试查询</button>}<h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
         <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="previous" onClick={previous} disabled={index <= 0}>← 上一个单词</button><button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
       </>}

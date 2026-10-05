@@ -97,7 +97,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   }, []);
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
-  const startPhoneticBackfill = useCallback(async () => {
+  const startPhoneticBackfill = useCallback(async (retryWord?: string) => {
     if (phoneticBackfillMonitor.current) return;
     phoneticBackfillMonitor.current = true;
     setPhoneticBackfillInProgress(true);
@@ -110,7 +110,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     setPhoneticFailedWords([]);
     try {
       for (let attempt = 0; attempt < 500; attempt += 1) {
-        const response = await fetch("/api/phonetic/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ excludeWords: Array.from(excluded) }) });
+        const response = await fetch("/api/phonetic/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ excludeWords: Array.from(excluded), retryWord }) });
         const result = await response.json();
         if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "音标补全请求失败");
         const batchFailed = Array.isArray(result.failedWords) ? result.failedWords.filter((word: unknown): word is string => typeof word === "string") : [];
@@ -118,12 +118,15 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
         failed = Array.from(new Set([...failed, ...batchFailed]));
         resolved += Number(result.updated) || 0;
         setPhoneticFailedWords(failed);
+        const generatedPronunciations: Record<string, string> = result.pronunciations && typeof result.pronunciations === "object" ? result.pronunciations : {};
+        const generatedByWord = new Map(Object.entries(generatedPronunciations).map(([word, phonetic]) => [word.toLocaleLowerCase("fr"), phonetic]));
         if (Number(result.queued) > 0) setPhoneticBackfillProgress(`已补全 ${resolved} 个 · 剩余 ${Number(result.remaining) || 0} 个`);
         const [learnedResponse, queueResponse] = await Promise.all([fetch("/api/words"), fetch("/api/queue")]);
         if (learnedResponse.ok && queueResponse.ok) {
           const [learnedItems, queueItems]: [LearnedWord[], QueueWord[]] = await Promise.all([learnedResponse.json(), queueResponse.json()]);
           setLearned(learnedItems); setQueue(queueItems);
           const pronunciationByWord = new Map([...learnedItems, ...queueItems].filter((item) => item.phonetic?.trim()).map((item) => [item.word.toLocaleLowerCase("fr"), item.phonetic]));
+          generatedByWord.forEach((phonetic, word) => pronunciationByWord.set(word, phonetic));
           setStudyWords((items) => {
             const updated = items.map((item) => pronunciationByWord.has(item.word.toLocaleLowerCase("fr")) ? { ...item, phonetic: pronunciationByWord.get(item.word.toLocaleLowerCase("fr"))! } : item);
             studyItems.current = updated;
@@ -372,7 +375,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
       <StudyTimer />
       <section className="player" ref={playerRef}>
         <div className="meta"><span>单词 {Math.min(index + 1, words.length || 1)} / {words.length}</span><span>{status}</span></div>
-        <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small>{!phoneticBackfillInProgress && (phoneticBackfillError || currentWordFailed) && <button className="phonetic-retry" onClick={() => startPhoneticBackfill()}>重试查询</button>}<h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
+        <div className="study-sides"><div className="french-side"><small>{currentPhonetic}</small>{!phoneticBackfillInProgress && (phoneticBackfillError || currentWordFailed) && <button className="phonetic-retry" onClick={() => startPhoneticBackfill(currentItem?.word)}>重试查询</button>}<h2>{currentWord}</h2></div><div className="chinese-side"><small>中文解释</small><b>{wordType || "—"}</b><p>{meaning || "正在生成…"}</p>{details && <em>{details}</em>}</div></div><div className="bar"><i style={{ width: `${words.length ? (index + 1) / words.length * 100 : 0}%` }} /></div>
         <div className="actions">{running ? <button className="start" onClick={() => stop()}>暂停</button> : <button className="start" onClick={start}>开始</button>}<button className="previous" onClick={previous} disabled={index <= 0}>← 上一个单词</button><button className="next" onClick={next}>下一个单词 →</button><button className="reset" onClick={reset}>重置</button></div>
       </section>
       </>}

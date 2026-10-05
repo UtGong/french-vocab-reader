@@ -72,5 +72,5 @@ export async function backfillUserPhonetics(userId: number, words: string[]) {
       sql`UPDATE study_queue SET phonetic = ${phonetic} WHERE user_id = ${userId} AND LOWER(word) = ${key} AND (phonetic IS NULL OR phonetic = '')`,
     ]);
   });
-  return { updated: updates.length, missing: words.length - updates.length };
+  return { updated: updates.length, missing: words.length - updates.length, pronunciations: Object.fromEntries(updates) };
 }

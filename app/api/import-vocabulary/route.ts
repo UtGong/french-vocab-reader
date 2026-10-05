@@ -2,7 +2,6 @@ import { after, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 import { refreshKnowledgeGraph } from "@/lib/knowledge-graph";
-import { backfillUserPhonetics } from "@/lib/phonetics";
 
 export const maxDuration = 60;
 const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -49,12 +48,7 @@ export async function POST(request: Request) {
       }
     }
     const phoneticsQueued = Array.from(unique.values()).filter((item) => !item.phonetic).length;
-    if (phoneticsQueued || (target === "learned" && saved)) after(async () => {
-      await Promise.all([
-        phoneticsQueued ? backfillUserPhonetics(user.id, Array.from(unique.values()).map((item) => item.word)).catch((error) => { console.error("Unable to fill IPA after document import", error); }) : Promise.resolve(),
-        target === "learned" && saved ? refreshKnowledgeGraph(user.id).catch((error) => { console.error("Unable to refresh graph after document import", error); }) : Promise.resolve(),
-      ]);
-    });
+    if (target === "learned" && saved) after(async () => { try { await refreshKnowledgeGraph(user.id); } catch (error) { console.error("Unable to refresh graph after document import", error); } });
     return NextResponse.json({ saved, skipped, target, phoneticsQueued }, { status: 201 });
   } catch (error) {
     console.error("Unable to import vocabulary document", error);

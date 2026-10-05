@@ -37,6 +37,8 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const [queue, setQueue] = useState<QueueWord[]>([]);
   const [studyWords, setStudyWords] = useState<QueueWord[]>(defaultStudyWords);
   const [phoneticBackfillInProgress, setPhoneticBackfillInProgress] = useState(false);
+  const [phoneticBackfillProgress, setPhoneticBackfillProgress] = useState("");
+  const [phoneticFailedWords, setPhoneticFailedWords] = useState<string[]>([]);
   const [mode, setMode] = useState<"text" | "explore" | "dictionary" | "sentence" | "knowledge" | "import">("text");
   const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
@@ -94,37 +96,48 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   }, []);
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
-  const monitorPhoneticBackfill = useCallback(async (queued: number) => {
-    if (!queued || phoneticBackfillMonitor.current) return;
+  const startPhoneticBackfill = useCallback(async () => {
+    if (phoneticBackfillMonitor.current) return;
     phoneticBackfillMonitor.current = true;
     setPhoneticBackfillInProgress(true);
+    setPhoneticBackfillProgress("检查词表…");
+    const excluded = new Set<string>();
+    let failed: string[] = [];
+    let resolved = 0;
+    let interrupted = false;
+    setPhoneticFailedWords([]);
     try {
-      for (let attempt = 0; attempt < 30; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      for (let attempt = 0; attempt < 500; attempt += 1) {
+        const response = await fetch("/api/phonetic/backfill", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ excludeWords: Array.from(excluded) }) });
+        if (!response.ok) throw new Error("音标补全请求失败");
+        const result = await response.json();
+        const batchFailed = Array.isArray(result.failedWords) ? result.failedWords.filter((word: unknown): word is string => typeof word === "string") : [];
+        batchFailed.forEach((word: string) => excluded.add(word.toLocaleLowerCase("fr")));
+        failed = Array.from(new Set([...failed, ...batchFailed]));
+        resolved += Number(result.updated) || 0;
+        setPhoneticFailedWords(failed);
+        if (Number(result.queued) > 0) setPhoneticBackfillProgress(`已补全 ${resolved} 个 · 剩余 ${Number(result.remaining) || 0} 个`);
         const [learnedResponse, queueResponse] = await Promise.all([fetch("/api/words"), fetch("/api/queue")]);
-        if (!learnedResponse.ok || !queueResponse.ok) continue;
-        const [learnedItems, queueItems]: [LearnedWord[], QueueWord[]] = await Promise.all([learnedResponse.json(), queueResponse.json()]);
-        setLearned(learnedItems); setQueue(queueItems);
-        const pronunciationByWord = new Map([...learnedItems, ...queueItems].filter((item) => item.phonetic?.trim()).map((item) => [item.word.toLocaleLowerCase("fr"), item.phonetic]));
-        setStudyWords((items) => {
-          const updated = items.map((item) => pronunciationByWord.has(item.word.toLocaleLowerCase("fr")) ? { ...item, phonetic: pronunciationByWord.get(item.word.toLocaleLowerCase("fr"))! } : item);
-          studyItems.current = updated;
-          return updated;
-        });
-        if (![...learnedItems, ...queueItems].some((item) => !item.phonetic?.trim())) break;
+        if (learnedResponse.ok && queueResponse.ok) {
+          const [learnedItems, queueItems]: [LearnedWord[], QueueWord[]] = await Promise.all([learnedResponse.json(), queueResponse.json()]);
+          setLearned(learnedItems); setQueue(queueItems);
+          const pronunciationByWord = new Map([...learnedItems, ...queueItems].filter((item) => item.phonetic?.trim()).map((item) => [item.word.toLocaleLowerCase("fr"), item.phonetic]));
+          setStudyWords((items) => {
+            const updated = items.map((item) => pronunciationByWord.has(item.word.toLocaleLowerCase("fr")) ? { ...item, phonetic: pronunciationByWord.get(item.word.toLocaleLowerCase("fr"))! } : item);
+            studyItems.current = updated;
+            return updated;
+          });
+        }
+        if (!Number(result.remaining) || !Number(result.processed)) break;
       }
-    } catch (error) { console.warn("Unable to monitor background pronunciation completion", error); }
-    finally { phoneticBackfillMonitor.current = false; setPhoneticBackfillInProgress(false); }
+    } catch (error) { interrupted = true; console.warn("Unable to complete background French IPA", error); setPhoneticBackfillProgress("音标补全中断，请刷新后重试"); }
+    finally {
+      phoneticBackfillMonitor.current = false;
+      setPhoneticBackfillInProgress(false);
+      if (!failed.length && !interrupted) setPhoneticBackfillProgress("");
+      else setPhoneticBackfillProgress(`有 ${failed.length} 个词暂未查到音标；刷新后会重试`);
+    }
   }, []);
-
-  const startPhoneticBackfill = useCallback(async () => {
-    try {
-      const response = await fetch("/api/phonetic/backfill", { method: "POST" });
-      if (!response.ok) return;
-      const result = await response.json();
-      await monitorPhoneticBackfill(Number(result.queued) || 0);
-    } catch (error) { console.warn("Unable to start background pronunciation completion", error); }
-  }, [monitorPhoneticBackfill]);
   useEffect(() => { startPhoneticBackfill(); }, [startPhoneticBackfill]);
 
   function stop(label = "已暂停") {
@@ -335,7 +348,8 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     setSelectedLearned((selected) => ids.every((id) => selected.includes(id)) ? selected.filter((id) => !ids.includes(id)) : [...new Set([...selected, ...ids])]);
   }
 
-  const currentPhonetic = studyWords[index]?.phonetic || (phoneticBackfillInProgress ? "正在后台补全音标…" : "暂缺音标");
+  const currentItem = studyWords[index];
+  const currentPhonetic = currentItem?.phonetic || (phoneticBackfillInProgress ? `后台补全中… ${phoneticBackfillProgress}` : phoneticFailedWords.some((word) => word.toLocaleLowerCase("fr") === currentItem?.word.toLocaleLowerCase("fr")) ? "音标查询失败，刷新后重试" : "音标待补全");
 
   return <main>
     <MilestoneCelebration milestone={celebration} onClose={() => setCelebration(null)} />
@@ -350,7 +364,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
         <textarea id="text" value={text} onChange={(event) => { stop("准备就绪"); setStudyWords([]); setTextPreview([]); setTextStatus(""); setText(event.target.value); setWords(splitWords(event.target.value)); setIndex(0); position.current = 0; }} />
         <div className="confirm-row"><span>{splitWords(text).length} 个词</span><button onClick={prepareText} disabled={textStatus.startsWith("正在")}>确认文本并生成词义</button></div><p className="text-status">{textStatus}</p>
         {textPreview.length > 0 && <div className="text-preview"><div className="preview-actions"><b>生成结果</b><button onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "收起" : "展开"}</button><button onClick={() => setSelectedPreview(selectedPreview.length === textPreview.length ? [] : textPreview.map((item) => item.id))}>{selectedPreview.length === textPreview.length ? "取消全选" : "全选"}</button><button className="preview-delete" disabled={!selectedPreview.length} onClick={deleteSelectedPreview}>删除已选（{selectedPreview.length}）</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("queue")}>加入待学习（{selectedPreview.length}）</button><button disabled={!selectedPreview.length} onClick={() => saveSelectedPreview("learned")}>标为已学（{selectedPreview.length}）</button><button className="preview-start" disabled={!selectedPreview.length} onClick={() => beginStudy(textPreview.filter((item) => selectedPreview.includes(item.id)))}>学习已选词汇（{selectedPreview.length}）</button></div>{previewOpen && <div className="table-wrap"><table><thead><tr><th>选择</th><th>法语</th><th>音标</th><th>词性</th><th>中文释义</th></tr></thead><tbody>{textPreview.map((item) => <tr key={item.id}><td><input type="checkbox" aria-label={`选择 ${item.word}`} checked={selectedPreview.includes(item.id)} onChange={() => setSelectedPreview((ids) => ids.includes(item.id) ? ids.filter((id) => id !== item.id) : [...ids, item.id])} /></td><td>{item.word}</td><td>{item.phonetic || "—"}</td><td>{item.word_type_zh}</td><td>{item.meaning_zh}</td></tr>)}</tbody></table></div>}</div>}
-      </section> : mode === "explore" ? <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} /> : mode === "dictionary" ? <Dictionary onUpdated={() => { loadQueue(); loadLearned(); }} /> : mode === "sentence" ? <SentencePractice targetLevel={targetLevel} onUpdated={() => { loadQueue(); loadLearned(); }} /> : mode === "knowledge" ? <KnowledgeGraph learned={learned} onReview={(items) => beginStudy(items, "review")} /> : <DocumentImporter onImported={(phoneticsQueued) => { loadQueue(); loadLearned(); if (phoneticsQueued) monitorPhoneticBackfill(phoneticsQueued); }} />}
+      </section> : mode === "explore" ? <VocabExplorer onQueued={loadQueue} targetLevel={targetLevel} /> : mode === "dictionary" ? <Dictionary onUpdated={() => { loadQueue(); loadLearned(); }} /> : mode === "sentence" ? <SentencePractice targetLevel={targetLevel} onUpdated={() => { loadQueue(); loadLearned(); }} /> : mode === "knowledge" ? <KnowledgeGraph learned={learned} onReview={(items) => beginStudy(items, "review")} /> : <DocumentImporter onImported={(phoneticsQueued) => { loadQueue(); loadLearned(); if (phoneticsQueued) startPhoneticBackfill(); }} />}
       {mode !== "knowledge" && <>
       <StudyTimer />
       <section className="player" ref={playerRef}>

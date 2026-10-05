@@ -39,7 +39,7 @@ export async function lookupFrenchChinese(word: string) {
   const first = results[0], headword = objects(first.headword)[0] ?? first;
   const lemma = typeof headword.text === "string" ? headword.text : typeof first.word === "string" ? first.word : word;
   const rawPos = (typeof headword.pos === "string" ? headword.pos : findString(first, ["pos", "part_of_speech"])).toLowerCase();
-  const pronunciation = headword.pronunciation ? findString(headword.pronunciation, ["ipa", "text", "value"]) : "";
+  const pronunciation = typeof headword.pronunciation === "string" ? headword.pronunciation : headword.pronunciation ? findString(headword.pronunciation, ["ipa", "text", "value"]) : "";
   const meanings = Array.from(new Set(results.flatMap(translatedMeanings).map((item) => item.trim()).filter(Boolean))).slice(0, 6);
   if (!meanings.length) return null;
   return { word: lemma, phonetic: pronunciation ? (pronunciation.startsWith("/") ? pronunciation : `/${pronunciation}/`) : "", wordType: posMap[rawPos] || "其他", meaning: meanings.join("；"), source: "Lexicala" };

@@ -34,12 +34,12 @@ export async function generateFrenchPhonetics(input: string[]) {
   }
 
   const missing = words.filter((word) => !pronunciations.has(keyOf(word)));
-  for (let start = 0; start < missing.length; start += 50) {
-    const batch = missing.slice(start, start + 50);
+  for (let start = 0; start < missing.length; start += 12) {
+    const batch = missing.slice(start, start + 12);
     try {
-      const result = await askLanguageModel(`Provide standard French IPA pronunciations for every supplied item. Preserve each spelling exactly. Return exactly {"items":[{"word":"exact supplied spelling","phonetic":"IPA enclosed in /slashes/"}]}. Do not translate, omit, or add words. Items: ${JSON.stringify(batch)}`, Math.min(2400, 300 + batch.length * 24));
-      if (!Array.isArray(result.items)) continue;
-      for (const item of result.items as Array<Record<string, unknown>>) {
+      const result = await askLanguageModel(`Provide standard French IPA pronunciations for every supplied item. Preserve each spelling exactly. Return exactly {"items":[{"word":"exact supplied spelling","phonetic":"IPA enclosed in /slashes/"}]}. Do not translate, omit, or add words. Items: ${JSON.stringify(batch)}`, 900);
+      const entries = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : [];
+      for (const item of entries) {
         if (typeof item.word !== "string") continue;
         const key = keyOf(item.word);
         if (!batch.some((word) => keyOf(word) === key)) continue;
@@ -48,6 +48,15 @@ export async function generateFrenchPhonetics(input: string[]) {
       }
     } catch (error) { console.error("Unable to batch-generate French IPA", error); }
   }
+
+  const stillMissing = words.filter((word) => !pronunciations.has(keyOf(word)));
+  await concurrent(stillMissing, 8, async (word) => {
+    try {
+      const result = await askLanguageModel(`Give the standard French IPA pronunciation of ${JSON.stringify(word)}. Return exactly {"phonetic":"IPA enclosed in /slashes/"}.`, 160);
+      const phonetic = asIpa(result.phonetic);
+      if (phonetic) pronunciations.set(keyOf(word), phonetic);
+    } catch (error) { console.warn(`Unable to generate pronunciation for ${word}`, error); }
+  });
   return pronunciations;
 }
 

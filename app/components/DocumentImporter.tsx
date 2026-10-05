@@ -5,7 +5,7 @@ import { unzipSync } from "fflate";
 import type { QueueWord } from "./StudyQueue";
 
 type ImportWord = Pick<QueueWord, "word" | "phonetic" | "word_type_zh" | "meaning_zh" | "details_zh" | "source_word">;
-type Props = { onImported: () => void };
+type Props = { onImported: (phoneticsQueued: number) => void };
 const norm = (value: string) => value.toLocaleLowerCase("zh-CN").replace(/[\s/_-]+/g, "");
 const headerGroups = {
   surface: ["原文词", "原文词表达", "法语词", "法语单词", "词语", "表达", "单词", "word", "expression", "forme"],
@@ -84,8 +84,8 @@ export default function DocumentImporter({ onImported }: Props) {
       const response = await fetch("/api/import-vocabulary", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target, items: selected.map((index) => { const item = words[index]; return { word: item.word, phonetic: item.phonetic, wordType: item.word_type_zh, meaning: item.meaning_zh, details: item.details_zh, sourceWord: item.source_word }; }) }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "导入失败");
-      setMessage(`已导入 ${data.saved} 个词${data.skipped ? `，跳过 ${data.skipped} 个重复或无效词` : ""}。`);
-      onImported();
+      setMessage(`已导入 ${data.saved} 个词${data.skipped ? `，跳过 ${data.skipped} 个重复或无效词` : ""}${data.phoneticsQueued ? `；正在后台补全 ${data.phoneticsQueued} 个音标` : ""}。`);
+      onImported(Number(data.phoneticsQueued) || 0);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "导入失败，请重试"); }
     finally { setImporting(false); }
   }

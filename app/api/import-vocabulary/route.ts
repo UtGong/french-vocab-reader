@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 import { refreshKnowledgeGraph } from "@/lib/knowledge-graph";
+import { backfillUserPhonetics } from "@/lib/phonetics";
 
 export const maxDuration = 60;
 const clean = (value: unknown, limit: number) => typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       if (target === "learned") {
         const old = await sql`SELECT id FROM learned_words WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${item.word}) LIMIT 1`;
         if (old.length) {
-          await sql`UPDATE learned_words SET word = ${item.word}, phonetic = ${item.phonetic}, word_type_zh = ${item.wordType}, meaning_zh = ${item.meaning}, details_zh = ${item.details}, source_word = ${item.sourceWord} WHERE id = ${old[0].id} AND user_id = ${user.id}`;
+          await sql`UPDATE learned_words SET word = ${item.word}, phonetic = CASE WHEN ${item.phonetic} = '' THEN phonetic ELSE ${item.phonetic} END, word_type_zh = ${item.wordType}, meaning_zh = ${item.meaning}, details_zh = ${item.details}, source_word = ${item.sourceWord} WHERE id = ${old[0].id} AND user_id = ${user.id}`;
         } else {
           await sql`INSERT INTO learned_words (user_id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${item.word}, ${item.phonetic}, ${item.wordType}, ${item.meaning}, ${item.details}, ${item.sourceWord})`;
         }
@@ -40,15 +41,21 @@ export async function POST(request: Request) {
         if (alreadyLearned.length) { skipped += 1; continue; }
         const old = await sql`SELECT id FROM study_queue WHERE user_id = ${user.id} AND LOWER(word) = LOWER(${item.word}) LIMIT 1`;
         if (old.length) {
-          await sql`UPDATE study_queue SET word = ${item.word}, phonetic = ${item.phonetic}, word_type_zh = ${item.wordType}, meaning_zh = ${item.meaning}, details_zh = ${item.details}, source_word = ${item.sourceWord}, created_at = NOW() WHERE id = ${old[0].id} AND user_id = ${user.id}`;
+          await sql`UPDATE study_queue SET word = ${item.word}, phonetic = CASE WHEN ${item.phonetic} = '' THEN phonetic ELSE ${item.phonetic} END, word_type_zh = ${item.wordType}, meaning_zh = ${item.meaning}, details_zh = ${item.details}, source_word = ${item.sourceWord}, created_at = NOW() WHERE id = ${old[0].id} AND user_id = ${user.id}`;
         } else {
           await sql`INSERT INTO study_queue (user_id, word, phonetic, word_type_zh, meaning_zh, details_zh, source_word) VALUES (${user.id}, ${item.word}, ${item.phonetic}, ${item.wordType}, ${item.meaning}, ${item.details}, ${item.sourceWord})`;
         }
         saved += 1;
       }
     }
-    if (target === "learned" && saved) after(async () => { try { await refreshKnowledgeGraph(user.id); } catch (error) { console.error("Unable to refresh graph after document import", error); } });
-    return NextResponse.json({ saved, skipped, target }, { status: 201 });
+    const phoneticsQueued = Array.from(unique.values()).filter((item) => !item.phonetic).length;
+    if (phoneticsQueued || (target === "learned" && saved)) after(async () => {
+      await Promise.all([
+        phoneticsQueued ? backfillUserPhonetics(user.id, Array.from(unique.values()).map((item) => item.word)).catch((error) => { console.error("Unable to fill IPA after document import", error); }) : Promise.resolve(),
+        target === "learned" && saved ? refreshKnowledgeGraph(user.id).catch((error) => { console.error("Unable to refresh graph after document import", error); }) : Promise.resolve(),
+      ]);
+    });
+    return NextResponse.json({ saved, skipped, target, phoneticsQueued }, { status: 201 });
   } catch (error) {
     console.error("Unable to import vocabulary document", error);
     return NextResponse.json({ error: "导入失败，请稍后重试" }, { status: 503 });

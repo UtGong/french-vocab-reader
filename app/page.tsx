@@ -36,6 +36,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const [details, setDetails] = useState("第一人称单数主语代词");
   const [queue, setQueue] = useState<QueueWord[]>([]);
   const [studyWords, setStudyWords] = useState<QueueWord[]>(defaultStudyWords);
+  const [phoneticLoadingWord, setPhoneticLoadingWord] = useState("");
   const [mode, setMode] = useState<"text" | "explore" | "dictionary" | "sentence" | "knowledge" | "import">("text");
   const [textStatus, setTextStatus] = useState("已预生成词义，可以直接开始学习");
   const [selectedLearned, setSelectedLearned] = useState<number[]>([]);
@@ -59,6 +60,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
   const active = useRef(false), position = useRef(0), list = useRef(words);
   const wordTypeNow = useRef(wordType), meaningNow = useRef(meaning), studyItems = useRef(studyWords);
   const playMode = useRef(playback);
+  const phoneticRequests = useRef(new Set<string>());
   useEffect(() => { active.current = running; }, [running]);
   useEffect(() => { position.current = index; }, [index]);
   useEffect(() => { list.current = words; }, [words]);
@@ -177,6 +179,27 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     }
     setWordType(""); setMeaning(""); setDetails(""); setSaveStatus("请先确认文本并生成全部词义");
   }, [currentWord, index, studyWords]);
+
+  useEffect(() => {
+    const item = studyWords[index];
+    if (!item?.word || item.phonetic?.trim()) return;
+    const key = item.word.toLocaleLowerCase("fr");
+    if (phoneticRequests.current.has(key)) return;
+    phoneticRequests.current.add(key);
+    setPhoneticLoadingWord(item.word);
+    fetch("/api/phonetic", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ word: item.word }) })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || typeof result.phonetic !== "string" || !result.phonetic.trim()) throw new Error(result.error || "Pronunciation unavailable");
+        setStudyWords((items) => {
+          const updated = items.map((entry) => entry.word.toLocaleLowerCase("fr") === key ? { ...entry, phonetic: result.phonetic } : entry);
+          studyItems.current = updated;
+          return updated;
+        });
+      })
+      .catch((error) => console.warn("Unable to retrieve word pronunciation", error))
+      .finally(() => { phoneticRequests.current.delete(key); setPhoneticLoadingWord((word) => word === item.word ? "" : word); });
+  }, [studyWords, index]);
 
   function beginStudy(items: QueueWord[], mode: "learn" | "review" = "learn") {
     if (!items.length) return;
@@ -297,7 +320,7 @@ function VocabularyApp({ email, logout }: { email: string; logout: () => Promise
     setSelectedLearned((selected) => ids.every((id) => selected.includes(id)) ? selected.filter((id) => !ids.includes(id)) : [...new Set([...selected, ...ids])]);
   }
 
-  const currentPhonetic = studyWords[index]?.phonetic || "音标待补充";
+  const currentPhonetic = studyWords[index]?.phonetic || (phoneticLoadingWord === studyWords[index]?.word ? "正在生成音标…" : "音标待补充");
 
   return <main>
     <MilestoneCelebration milestone={celebration} onClose={() => setCelebration(null)} />

@@ -1,14 +1,40 @@
 import { ensureStudyQueueTable, ensureWordsTable } from "@/lib/db";
 import { lookupFrenchChinese } from "@/lib/lexicala";
-import { askLanguageModel } from "@/lib/scnet";
 
 const keyOf = (value: string) => value.trim().toLocaleLowerCase("fr");
 const asIpa = (value: unknown) => {
   if (typeof value !== "string") return "";
-  const phonetic = value.trim().replace(/^[/\[]|[/\]]$/g, "").trim().slice(0, 120);
+  const phonetic = value.trim().replace(/^\//, "").replace(/\/$/, "").replace(/^\[/, "").replace(/\]$/, "").trim().slice(0, 120);
   return phonetic ? `/${phonetic}/` : "";
 };
-const phoneticOf = (value: Record<string, unknown>) => asIpa(value.phonetic ?? value.ipa ?? value.pronunciation ?? value.pronunciation_ipa);
+type WiktPronunciation = { lang_code?: unknown; sounds?: unknown };
+type WiktSound = { ipa?: unknown; tags?: unknown };
+
+/** Look up a real French Wiktionary transcription; never infer IPA from spelling. */
+export async function lookupFrenchIpaFromWiktApi(word: string): Promise<string> {
+  const url = new URL(`https://api.wiktapi.dev/v1/en/word/${encodeURIComponent(word)}/pronunciations`);
+  url.searchParams.set("lang", "fr");
+  const response = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10000) });
+  if (response.status === 404) return "";
+  if (!response.ok) throw new Error(`WiktApi returned ${response.status}`);
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object") return "";
+  const pronunciations = (payload as { pronunciations?: unknown }).pronunciations;
+  if (!Array.isArray(pronunciations)) return "";
+  const candidates = pronunciations
+    .filter((item): item is WiktPronunciation => Boolean(item) && typeof item === "object" && (item as WiktPronunciation).lang_code === "fr")
+    .flatMap((item) => Array.isArray(item.sounds) ? item.sounds as WiktSound[] : [])
+    .filter((sound) => typeof sound?.ipa === "string" && Boolean(asIpa(sound.ipa)));
+  // Prefer the unmarked standard entry over regional variants.
+  candidates.sort((left, right) => {
+    const score = (sound: WiktSound) => {
+      const tags = Array.isArray(sound.tags) ? sound.tags.map(String).join(" ").toLowerCase() : "";
+      return tags ? (tags.includes("france") ? 1 : 2) : 0;
+    };
+    return score(left) - score(right);
+  });
+  return candidates.length ? asIpa(candidates[0].ipa) : "";
+}
 
 async function concurrent<T>(items: T[], limit: number, task: (item: T) => Promise<void>) {
   let cursor = 0;
@@ -24,8 +50,18 @@ export async function generateFrenchPhonetics(input: string[]) {
   const words = Array.from(new Map(input.map((word) => [keyOf(word), word.trim()])).values()).filter(Boolean);
   const pronunciations = new Map<string, string>();
 
-  if (process.env.LEXICALA_API_KEY) {
-    await concurrent(words, 12, async (word) => {
+  // WiktApi is keyless and its French Wiktionary entries provide dictionary IPA.
+  // Prefer this over generated transcriptions, which can be plausible but wrong.
+  await concurrent(words, 6, async (word) => {
+    try {
+      const phonetic = await lookupFrenchIpaFromWiktApi(word);
+      if (phonetic) pronunciations.set(keyOf(word), phonetic);
+    } catch (error) { console.warn(`WiktApi pronunciation unavailable for ${word}`, error); }
+  });
+
+  const missingFromWikt = words.filter((word) => !pronunciations.has(keyOf(word)));
+  if (process.env.LEXICALA_API_KEY && missingFromWikt.length) {
+    await concurrent(missingFromWikt, 8, async (word) => {
       try {
         const entry = await lookupFrenchChinese(word);
         const phonetic = asIpa(entry?.phonetic);
@@ -34,30 +70,6 @@ export async function generateFrenchPhonetics(input: string[]) {
     });
   }
 
-  const missing = words.filter((word) => !pronunciations.has(keyOf(word)));
-  for (let start = 0; start < missing.length; start += 12) {
-    const batch = missing.slice(start, start + 12);
-    try {
-      const result = await askLanguageModel(`Provide standard French IPA pronunciations for every supplied item. Preserve each spelling exactly. Return exactly {"items":[{"word":"exact supplied spelling","phonetic":"IPA without surrounding slashes"}]}. Do not translate, omit, or add words. Items: ${JSON.stringify(batch)}`, 900, 18000);
-      const entries = Array.isArray(result.items) ? result.items as Array<Record<string, unknown>> : Array.isArray(result.results) ? result.results as Array<Record<string, unknown>> : [];
-      for (const item of entries) {
-        if (typeof item.word !== "string") continue;
-        const key = keyOf(item.word);
-        if (!batch.some((word) => keyOf(word) === key)) continue;
-        const phonetic = phoneticOf(item);
-        if (phonetic) pronunciations.set(key, phonetic);
-      }
-    } catch (error) { console.error("Unable to batch-generate French IPA", error); }
-  }
-
-  const stillMissing = words.filter((word) => !pronunciations.has(keyOf(word)));
-  await concurrent(stillMissing, 8, async (word) => {
-    try {
-      const result = await askLanguageModel(`Give the standard French IPA pronunciation of ${JSON.stringify(word)}. Return exactly {"phonetic":"IPA without surrounding slashes"}.`, 160, 18000);
-      const phonetic = phoneticOf(result);
-      if (phonetic) pronunciations.set(keyOf(word), phonetic);
-    } catch (error) { console.warn(`Unable to generate pronunciation for ${word}`, error); }
-  });
   return pronunciations;
 }
 

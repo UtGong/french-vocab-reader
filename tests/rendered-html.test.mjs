@@ -108,7 +108,8 @@ test("uses the configured SCNet model without exposed credentials", async () => 
   assert.match(helper, /process\.env\.SCNET_API_KEY/);
   assert.match(helper, /api\.scnet\.cn\/api\/llm\/v1/);
   assert.match(helper, /process\.env\.SCNET_MODEL/);
-  assert.match(helper, /AbortSignal\.timeout\(50000\)/);
+  assert.match(helper, /timeoutMs = 50000/);
+  assert.match(helper, /AbortSignal\.timeout\(timeoutMs\)/);
   assert.match(helper, /response_format: \{ type: "json_object" \}/);
   assert.match(helper, /enable_thinking: false/);
   assert.match(helper, /replace\(\/\^```\(\?:json\)\?/);
@@ -245,6 +246,21 @@ test("keeps secondary controls in settings and provides a simple dictionary", as
   assert.match(page, /删除已选（\{selectedPreview\.length\}）/);
   assert.match(page, /function deleteSelectedPreview\(\)/);
   assert.match(page, /id: -\(itemIndex \+ 1\)/);
+});
+
+test("backfills dictionary-sourced French IPA from WiktApi before Lexicala", async () => {
+  const [phonetics, backfill, analyze] = await Promise.all([read("../lib/phonetics.ts"), read("../app/api/phonetic/backfill/route.ts"), read("../app/api/analyze/route.ts")]);
+  assert.match(phonetics, /api\.wiktapi\.dev\/v1\/en\/word/);
+  assert.match(phonetics, /url\.searchParams\.set\("lang", "fr"\)/);
+  assert.match(phonetics, /lookupFrenchIpaFromWiktApi/);
+  assert.doesNotMatch(phonetics, /askLanguageModel/);
+  assert.ok(phonetics.indexOf("lookupFrenchIpaFromWiktApi(word)") < phonetics.indexOf("lookupFrenchChinese(word)"));
+  assert.match(phonetics, /lang_code === "fr"/);
+  assert.match(backfill, /wiktapi: true/);
+  assert.doesNotMatch(backfill, /音标服务未配置/);
+  assert.match(analyze, /lookupFrenchIpaFromWiktApi\(word\)/);
+  assert.match(analyze, /phonetic: wiktPhonetic \|\| lexicala\.phonetic/);
+  assert.match(analyze, /phonetic: wiktPhonetic,/);
 });
 
 test("celebrates learned vocabulary milestones once per user", async () => {

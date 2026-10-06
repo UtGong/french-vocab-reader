@@ -10,12 +10,10 @@ export async function POST(request: Request) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const providersConfigured = {
+      wiktapi: true,
       lexicala: Boolean(process.env.LEXICALA_API_KEY),
       scnet: Boolean(process.env.SCNET_API_KEY),
     };
-    if (!providersConfigured.lexicala && !providersConfigured.scnet) {
-      return NextResponse.json({ error: "音标服务未配置，请在部署环境添加 Lexicala 或 SCNet API 密钥" }, { status: 503 });
-    }
     const sql = await ensureStudyQueueTable();
     await ensureWordsTable();
     const [learned, queued] = await Promise.all([
